@@ -34,18 +34,21 @@
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .card .value { font-size: 28px; font-weight: 800; color: #000; }
 
-        /* Pedidos */
-        .order-card { background: white; border: 1px solid #eee; border-left: 5px solid var(--primary); border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .btn-dispatch { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        /* Chat Restaurado */
+        .chat-frame { background: white; border: 1px solid #eee; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; height: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .chat-body { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; background: #fdfdfd; }
+        .msg { padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; max-width: 85%; font-size: 13px; }
+        .msg.admin { background: var(--primary); color: white; align-self: flex-end; }
+        .msg.driver { background: #f1f5f9; color: #000; align-self: flex-start; border: 1px solid #e2e8f0; }
 
-        /* Mapas - Altura Garantida */
-        #map, #map-cadastro { width: 100%; border-radius: 15px; border: 1px solid #eee; background: #f0f0f0; }
-        #map { height: 600px; }
-        #map-cadastro { height: 400px; }
+        /* Mapas - Altura FIXA Obrigatória */
+        #map { height: 600px; width: 100%; border-radius: 15px; border: 1px solid #eee; background: #eee; }
+        #map-cadastro { height: 350px; width: 100%; border-radius: 15px; border: 1px solid #eee; background: #eee; }
 
+        .order-card { background: white; border: 1px solid #eee; border-left: 5px solid var(--primary); border-radius: 10px; padding: 15px; margin-bottom: 10px; }
         .form-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #64748b; }
+        .input-group label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 5px; color: #64748b; }
         .input-group input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; }
         .btn-save { width: 100%; background: var(--primary); color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
     </style>
@@ -71,55 +74,65 @@
             <div class="card" style="border-left:5px solid var(--primary)"><h3>Pendentes</h3><div class="value" id="dash-pending">0</div></div>
             <div class="card" style="border-left:5px solid #000"><h3>Em Rota</h3><div class="value" id="dash-active">0</div></div>
         </div>
-        <h3>Pedidos Aguardando</h3>
-        <div id="pending-list" style="min-height: 100px;">
+        
+        <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap: 25px;">
+            <div>
+                <h3>Pedidos Aguardando</h3>
+                <div id="pending-list"></div>
             </div>
+            <div class="chat-frame">
+                <div style="padding:15px; font-weight:bold; background:#000; color: #fff; display: flex; justify-content: space-between;">
+                    Chat Central <span><i class="fas fa-comments"></i></span>
+                </div>
+                <div id="chat-msgs" class="chat-body"></div>
+                <div style="padding:10px; display:flex; gap:5px; background: #f8fafc; border-top: 1px solid #eee;">
+                    <input type="text" id="chat-txt" placeholder="Falar com entregadores..." style="flex:1; padding:10px; border:1px solid #ddd; border-radius:5px; outline:none;">
+                    <button onclick="sendMsg()" style="background:var(--primary); color:white; border:none; padding:8px 15px; border-radius:5px; font-weight:bold;">Enviar</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="novo-pedido" class="main">
         <h2 style="font-weight: 900;">Novo Pedido</h2>
         <div class="form-layout">
             <div>
-                <div class="input-group"><label>Cliente</label><input type="text" id="np-name"></div>
-                <div class="input-group"><label>Valor da Venda</label><input type="text" id="np-price" oninput="maskMoney(this)"></div>
-                <div class="input-group"><label>WhatsApp</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16"></div>
-                <div class="input-group"><label>Endereço em Recife</label><input type="text" id="np-addr" onblur="buscarEndereco()"></div>
+                <div class="input-group"><label>CLIENTE</label><input type="text" id="np-name" placeholder="Nome Completo"></div>
+                <div class="input-group"><label>VALOR (R$)</label><input type="text" id="np-price" oninput="maskMoney(this)" placeholder="R$ 0,00"></div>
+                <div class="input-group"><label>WHATSAPP</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16" placeholder="(81) 9 ...."></div>
+                <div class="input-group"><label>ENDEREÇO EM RECIFE</label><input type="text" id="np-addr" onblur="buscarEndereco()" placeholder="Rua, Bairro, Número"></div>
                 <input type="hidden" id="np-lat"><input type="hidden" id="np-lng">
-                <button id="btn-create" class="btn-save" onclick="saveOrder()">CRIAR E DESPACHAR</button>
+                <button id="btn-create" class="btn-save" onclick="saveOrder()">CRIAR E GERAR RASTREIO</button>
             </div>
             <div id="map-cadastro"></div>
         </div>
     </div>
 
     <div id="monitoramento" class="main">
-        <h2 style="font-weight: 900;">Monitoramento em Tempo Real</h2>
-        <div style="display: grid; grid-template-columns: 300px 1fr; gap: 20px;">
-            <div id="monitor-list" style="background: white; border: 1px solid #eee; border-radius: 12px; height: 600px; overflow-y: auto; padding: 10px;"></div>
+        <h2 style="font-weight: 900;">Monitoramento Real-Time</h2>
+        <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px;">
+            <div id="monitor-list" style="background:white; padding:10px; border-radius:12px; overflow-y:auto; border:1px solid #eee; height: 600px;"></div>
             <div id="map"></div>
         </div>
     </div>
 
-    <div id="historico" class="main">
-        <h2 style="font-weight: 900;">Histórico</h2>
-        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden;">
-            <thead style="background: #f8fafc;"><tr><th style="padding: 15px; text-align: left;">Data</th><th style="padding: 15px; text-align: left;">Cliente</th><th style="padding: 15px; text-align: left;">Valor</th><th style="padding: 15px; text-align: left;">Moto</th></tr></thead>
-            <tbody id="history-body"></tbody>
-        </table>
-    </div>
+    <audio id="hornSound" src="https://www.myinstants.com/media/sounds/vuvuzela.mp3"></audio>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const socket = io();
-        let globalData = { pendingOrders: [], activeOrders: [], drivers: [], history: [] };
-        let map, mapCad, cadMarker;
+        let globalData = null;
+        let map, mapCad, routeLayer;
+        let markers = {};
         const lightTile = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
-        // Inicialização de Mapas
+        // Inicialização de mapas blindada
         function initMaps() {
             if (!map) {
                 map = L.map('map', { zoomControl: false }).setView([-8.0592, -34.8996], 13);
                 L.tileLayer(lightTile).addTo(map);
+                routeLayer = L.layerGroup().addTo(map);
             }
             if (!mapCad) {
                 mapCad = L.map('map-cadastro', { zoomControl: false }).setView([-8.0592, -34.8996], 13);
@@ -127,117 +140,125 @@
             }
         }
 
-        // Navegação entre abas
+        window.onload = () => { initMaps(); refreshData(); };
+
         function nav(id) {
             document.querySelectorAll('.main').forEach(d => d.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(d => d.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             
-            // Corrige o bug do Leaflet carregar cinza
+            // Força o Leaflet a recalcular o tamanho (Resolve o mapa cinza/sumido)
             setTimeout(() => {
                 if (id === 'monitoramento' && map) map.invalidateSize();
                 if (id === 'novo-pedido' && mapCad) mapCad.invalidateSize();
             }, 300);
         }
 
-        // Atualizar os dados do Dashboard
-        async function refreshData() {
-            try {
-                const res = await fetch('/api/dashboard');
-                globalData = await res.json();
-                
-                // Atualiza Cards
-                document.getElementById('dash-money').innerText = globalData.history.reduce((a, b) => a + (b.price||0), 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-                document.getElementById('dash-pending').innerText = globalData.pendingOrders.length;
-                document.getElementById('dash-active').innerText = globalData.activeOrders.length;
-
-                // Limpa e reconstrói a lista de Pendentes
-                const pendingContainer = document.getElementById('pending-list');
-                pendingContainer.innerHTML = ''; 
-                if (globalData.pendingOrders.length === 0) {
-                    pendingContainer.innerHTML = '<p style="color:#999">Nenhum pedido aguardando.</p>';
-                } else {
-                    globalData.pendingOrders.forEach(o => {
-                        const div = document.createElement('div');
-                        div.className = 'order-card';
-                        div.innerHTML = `
-                            <b>${o.clientName}</b><br><small>${o.address}</small>
-                            <div style="display:flex; gap:10px; margin-top:10px;">
-                                <select id="sel-${o.id}" style="padding:5px; border-radius:5px; border:1px solid #ddd; flex:1;">
-                                    <option value="">Escolha o Motoboy...</option>
-                                    ${globalData.drivers.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
-                                </select>
-                                <button class="btn-dispatch" onclick="despachar('${o.id}')">Enviar</button>
-                            </div>
-                        `;
-                        pendingContainer.appendChild(div);
-                    });
-                }
-            } catch (e) { console.error("Erro no refresh:", e); }
+        // Lógica de Chat
+        function sendMsg() {
+            const t = document.getElementById('chat-txt').value; if(!t.trim()) return;
+            socket.emit('send_chat_message', { to: 'admin', text: t, from: 'Admin' });
+            document.getElementById('chat-txt').value = '';
         }
 
-        // Criar Pedido
+        socket.on('new_chat_message', (data) => {
+            const box = document.getElementById('chat-msgs');
+            const d = document.createElement('div');
+            d.className = data.from === 'Admin' ? 'msg admin' : 'msg driver';
+            d.innerHTML = `<b>${data.from === 'Admin' ? 'Central' : data.from}:</b> ${data.text}`;
+            box.appendChild(d); box.scrollTop = box.scrollHeight;
+        });
+
+        async function refreshData() {
+            const res = await fetch('/api/dashboard');
+            globalData = await res.json();
+            
+            document.getElementById('dash-money').innerText = globalData.history.reduce((a, b) => a + (b.price||0), 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+            document.getElementById('dash-pending').innerText = globalData.pendingOrders.length;
+            document.getElementById('dash-active').innerText = globalData.activeOrders.length;
+
+            const pendingBox = document.getElementById('pending-list');
+            pendingBox.innerHTML = globalData.pendingOrders.map(o => `
+                <div class="order-card">
+                    <b>${o.clientName}</b><br><small>${o.address}</small>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <select id="sel-${o.id}" style="padding:5px; border-radius:5px; border:1px solid #ddd; flex:1;">
+                            <option value="">Moto...</option>
+                            ${globalData.drivers.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
+                        </select>
+                        <button class="btn-dispatch" onclick="despachar('${o.id}')">Enviar</button>
+                    </div>
+                </div>
+            `).join('') || '<p style="color:#999">Nenhum pedido pendente.</p>';
+
+            document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
+                <div style="padding:15px; border-bottom:1px solid #eee;">
+                    <b>${o.clientName}</b><br><small>Moto: ${o.driverName}</small>
+                    <div style="display:flex; gap:5px; margin-top:10px;">
+                        <button onclick="focarRota('${o.id}')" style="flex:1; padding:8px; border-radius:5px; border:1px solid #eee; background:#fff; font-weight:bold;">Mapa</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         async function saveOrder() {
             const btn = document.getElementById('btn-create');
-            const data = {
-                clientName: document.getElementById('np-name').value,
-                price: parseFloat(document.getElementById('np-price').value.replace('R$','').replace('.','').replace(',','.').trim()) || 0,
-                phone: document.getElementById('np-phone').value,
-                address: document.getElementById('np-addr').value,
-                lat: document.getElementById('np-lat').value,
-                lng: document.getElementById('np-lng').value
-            };
+            const name = document.getElementById('np-name').value;
+            if(!name) return alert("Nome obrigatório!");
 
-            if (!data.clientName || !data.address) return alert("Preencha os campos obrigatórios!");
+            btn.innerText = "⏳ CRIANDO..."; btn.disabled = true;
 
-            btn.innerText = "⏳ Criando..."; btn.disabled = true;
-
+            const price = parseFloat(document.getElementById('np-price').value.replace('R$','').replace('.','').replace(',','.').trim()) || 0;
+            
             try {
-                const response = await fetch('/register-delivery', {
+                const res = await fetch('/register-delivery', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
+                    body: JSON.stringify({ 
+                        clientName: name, 
+                        price, 
+                        phone: document.getElementById('np-phone').value, 
+                        address: document.getElementById('np-addr').value, 
+                        lat: document.getElementById('np-lat').value, 
+                        lng: document.getElementById('np-lng').value 
+                    })
                 });
 
-                if (response.ok) {
-                    alert("Pedido Criado com Sucesso!");
-                    // Limpa formulário
+                if(res.ok) {
+                    alert("Sucesso!");
                     document.querySelectorAll('#novo-pedido input').forEach(i => i.value = '');
-                    btn.innerText = "CRIAR E DESPACHAR"; btn.disabled = false;
+                    btn.innerText = "CRIAR E GERAR RASTREIO"; btn.disabled = false;
                     nav('dashboard');
-                    await refreshData(); // Força a atualização da lista
+                    refreshData();
+                } else {
+                    throw new Error();
                 }
-            } catch (err) { alert("Erro ao conectar ao servidor!"); btn.disabled = false; }
-        }
-
-        async function despachar(id) {
-            const driverId = document.getElementById('sel-' + id).value;
-            if (!driverId) return alert("Selecione um motoboy!");
-            await fetch('/assign-order', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ orderId: id, driverSocketId: driverId })
-            });
-            refreshData();
-        }
-
-        // Busca de Endereço no Mapa
-        async function buscarEndereco() {
-            const addr = document.getElementById('np-addr').value;
-            if (addr.length < 5) return;
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ', Recife, PE')}`);
-            const data = await res.json();
-            if (data.length > 0) {
-                const lat = data[0].lat, lng = data[0].lon;
-                document.getElementById('np-lat').value = lat;
-                document.getElementById('np-lng').value = lng;
-                if (cadMarker) mapCad.removeLayer(cadMarker);
-                cadMarker = L.circleMarker([lat, lng], { radius: 8, color: '#FF4500', fillColor: '#FF4500', fillOpacity: 1 }).addTo(mapCad);
-                mapCad.setView([lat, lng], 16);
+            } catch (e) {
+                alert("Erro ao salvar! Verifique a conexão.");
+                btn.innerText = "CRIAR E GERAR RASTREIO"; btn.disabled = false;
             }
         }
 
-        // Máscaras
+        async function despachar(id) {
+            const dId = document.getElementById('sel-'+id).value;
+            if(!dId) return alert("Selecione um motoboy!");
+            await fetch('/assign-order', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({orderId: id, driverSocketId: dId}) });
+            refreshData();
+        }
+
+        async function buscarEndereco() {
+            const addr = document.getElementById('np-addr').value; if(addr.length < 5) return;
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ', Recife, PE')}`);
+            const data = await res.json();
+            if(data.length > 0) {
+                const { lat, lon } = data[0];
+                document.getElementById('np-lat').value = lat; document.getElementById('np-lng').value = lon;
+                if(window.cMark) mapCad.removeLayer(window.cMark);
+                window.cMark = L.circleMarker([lat, lon], { radius: 8, color: '#FF4500', fillColor: '#FF4500', fillOpacity: 1 }).addTo(mapCad);
+                mapCad.setView([lat, lon], 16);
+            }
+        }
+
         function maskMoney(i) { let v = i.value.replace(/\D/g, "") / 100; i.value = v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
         function maskPhone(i) {
             let v = i.value.replace(/\D/g, "");
@@ -249,19 +270,7 @@
             i.value = v;
         }
 
-        // Resetar Sistema
-        async function fullReset() {
-            if(prompt("Senha Master:") === "Abraao2026123") {
-                await fetch('/api/reset-system', { method: 'POST' });
-                location.reload();
-            }
-        }
-
-        // Inicializa tudo
-        window.onload = () => {
-            initMaps();
-            refreshData();
-        };
+        async function fullReset() { if(prompt("Senha:")==="Abraao2026123") { await fetch('/api/reset-system', {method:'POST'}); location.reload(); } }
 
         socket.on('refresh_admin', refreshData);
     </script>
