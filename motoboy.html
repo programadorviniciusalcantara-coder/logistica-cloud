@@ -8,44 +8,79 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <style>
-        /* TEMA LIGHT - iGO iPHONES */
-        body { background-color: #FFFFFF; color: #000000; overflow: hidden; position: fixed; width: 100%; height: 100%; font-family: 'Inter', sans-serif; }
+        /* TEMA TOTALMENTE CLARO - iGO iPHONES */
+        body { 
+            background-color: #FFFFFF; 
+            color: #000000; 
+            overflow: hidden; 
+            position: fixed; 
+            width: 100%; 
+            height: 100%; 
+            font-family: 'Inter', sans-serif; 
+        }
         
-        /* Mapa Claro sem filtros de contraste/grayscale */
+        /* Mapa Limpo e Claro */
         #map { height: 100vh; width: 100%; z-index: 1; }
         
-        .status-bar { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: rgba(255,255,255,0.9); backdrop-filter: blur(15px); z-index: 100; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #eee; }
+        .status-bar { 
+            position: fixed; top: 0; left: 0; right: 0; height: 60px; 
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(15px); 
+            z-index: 100; display: flex; align-items: center; justify-content: center; 
+            border-bottom: 2px solid #f0f0f0; 
+        }
         
-        /* Botão GO em Laranja iGO */
-        .go-button { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; background: #FF4500; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; color: white; border: 5px solid #FFFFFF; box-shadow: 0 10px 25px rgba(255, 69, 0, 0.3); z-index: 101; cursor: pointer; transition: 0.4s; }
-        .go-button.online { background: #000000; border-color: #FF4500; } /* Inverte para preto quando online */
+        /* Botão GO - Laranja iGO */
+        .go-button { 
+            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); 
+            width: 85px; height: 85px; background: #FF4500; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: 900; font-size: 20px; color: white; border: 5px solid #FFFFFF; 
+            box-shadow: 0 10px 25px rgba(255, 69, 0, 0.4); z-index: 101; 
+            cursor: pointer; transition: 0.4s; 
+        }
+        .go-button.online { background: #000000; border-color: #FF4500; }
         
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 80px; background: #FFFFFF; display: flex; align-items: center; justify-content: space-around; z-index: 150; border-top: 1px solid #eee; }
+        .bottom-nav { 
+            position: fixed; bottom: 0; left: 0; right: 0; height: 80px; 
+            background: #FFFFFF; display: flex; align-items: center; 
+            justify-content: space-around; z-index: 150; border-top: 1px solid #eee; 
+        }
         
-        .bottom-sheet { position: fixed; bottom: 80px; left: 0; right: 0; background: #FFFFFF; border-radius: 24px 24px 0 0; z-index: 110; transition: 0.5s; transform: translateY(105%); padding: 25px; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); max-height: 70vh; overflow-y: auto; color: #000; }
+        .bottom-sheet { 
+            position: fixed; bottom: 80px; left: 0; right: 0; background: #FFFFFF; 
+            border-radius: 24px 24px 0 0; z-index: 110; transition: 0.5s; 
+            transform: translateY(105%); padding: 25px; 
+            box-shadow: 0 -15px 40px rgba(0,0,0,0.1); max-height: 70vh; 
+            overflow-y: auto; color: #000; 
+        }
         .bottom-sheet.active { transform: translateY(0); }
         
-        #login-screen { position: fixed; inset: 0; background: #FFFFFF; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
-        
-        /* Ajuste de inputs para o modo claro */
-        .igo-input { background: #f4f4f4; border: 1px solid #ddd; color: #000; }
+        #login-screen { 
+            position: fixed; inset: 0; background: #FFFFFF; z-index: 500; 
+            display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; padding: 30px; 
+        }
+
+        .input-igo {
+            background: #f9f9f9; border: 1px solid #ddd; color: #000;
+        }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <div class="mb-10 text-center">
-            <div class="w-20 h-24 bg-[#FF4500] rounded-xl flex items-center justify-center mx-auto mb-6 text-4xl font-black italic text-white shadow-lg">iG</div>
+            <img src="logo.jpg" class="w-32 h-32 object-contain mx-auto mb-6" alt="iGO Logo">
             <h1 class="text-3xl font-bold text-black">iGO Driver</h1>
-            <p class="text-gray-500 text-sm">Painel do Entregador</p>
+            <p class="text-gray-500 font-medium mt-2">Parceiro de Entregas</p>
         </div>
-        <input type="text" id="login-name" class="w-full max-w-xs igo-input p-5 rounded-xl mb-4 text-lg" placeholder="Seu Nome">
-        <input type="tel" id="login-phone" class="w-full max-w-xs igo-input p-5 rounded-xl mb-6 text-lg" placeholder="Telefone (ID Único)">
-        <button onclick="fazerLogin()" class="w-full max-w-xs bg-black text-white p-5 rounded-xl font-black text-lg uppercase shadow-lg active:scale-95 transition">Começar</button>
+        <input type="text" id="login-name" class="w-full max-w-xs input-igo p-5 rounded-2xl mb-4 text-lg outline-none focus:border-[#FF4500]" placeholder="Seu Nome">
+        <input type="tel" id="login-phone" class="w-full max-w-xs input-igo p-5 rounded-2xl mb-6 text-lg outline-none focus:border-[#FF4500]" placeholder="Telefone (ID Único)">
+        <button onclick="fazerLogin()" class="w-full max-w-xs bg-black text-white p-5 rounded-2xl font-black text-lg uppercase shadow-lg active:scale-95 transition">Entrar no Sistema</button>
     </div>
 
     <div class="status-bar">
-        <span class="text-gray-600 font-bold text-sm tracking-widest" id="status-text">ESTÁ OFFLINE</span>
+        <span class="text-gray-400 font-black text-xs tracking-[0.2em]" id="status-text">OFFLINE</span>
     </div>
 
     <div id="map"></div>
@@ -59,18 +94,23 @@
 
     <div class="bottom-sheet" id="history-panel">
         <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8"></div>
-        <h2 class="text-2xl font-bold mb-6">Minhas Entregas</h2>
+        <h2 class="text-2xl font-bold mb-6">Minha Atividade</h2>
         <div id="history-content" class="space-y-4"></div>
     </div>
 
     <nav class="bottom-nav">
-        <button onclick="abrirMapa()" class="text-[#FF4500] flex flex-col items-center"><i class="fas fa-map text-xl"></i><span class="text-[10px] mt-1 font-bold">Mapa</span></button>
-        <button onclick="abrirHistorico()" class="text-gray-400 flex flex-col items-center"><i class="fas fa-list text-xl"></i><span class="text-[10px] mt-1 font-bold">Atividade</span></button>
+        <button onclick="abrirMapa()" class="text-[#FF4500] flex flex-col items-center">
+            <i class="fas fa-map text-xl"></i><span class="text-[10px] mt-1 font-bold">MAPA</span>
+        </button>
+        <button onclick="abrirHistorico()" class="text-gray-400 flex flex-col items-center">
+            <i class="fas fa-list text-xl"></i><span class="text-[10px] mt-1 font-bold">HISTÓRICO</span>
+        </button>
     </nav>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // MANTENDO TODA A SUA LÓGICA ORIGINAL DE CONEXÃO
         const API_URL = "https://logistica-igo.onrender.com";
         const urlParams = new URLSearchParams(window.location.search);
         const STORE_SLUG = urlParams.get('store') || 'igo-iphones';
@@ -81,7 +121,7 @@
         function fazerLogin() {
             const nome = document.getElementById('login-name').value;
             const fone = document.getElementById('login-phone').value;
-            if(!nome || !fone) return alert("Preencha tudo!");
+            if(!nome || !fone) return alert("Preencha todos os campos!");
             localStorage.setItem('driver_name', nome);
             localStorage.setItem('driver_phone', fone);
             document.getElementById('login-screen').style.display = 'none';
@@ -89,7 +129,7 @@
         }
 
         function iniciarApp() {
-            // MAPA CLARO/BRANCO (Positron)
+            // MAPA CLARO (Estilo Positron)
             map = L.map('map', { zoomControl: false }).setView([-8.05428, -34.8813], 15);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; CARTO'
@@ -105,8 +145,8 @@
             const btn = document.getElementById('btn-main');
             const statusLabel = document.getElementById('status-text');
             
-            statusLabel.innerText = isOnline ? "VOCÊ ESTÁ ONLINE" : "ESTÁ OFFLINE";
-            statusLabel.className = isOnline ? "text-[#FF4500] font-bold text-sm tracking-widest" : "text-gray-600 font-bold text-sm tracking-widest";
+            statusLabel.innerText = isOnline ? "ONLINE" : "OFFLINE";
+            statusLabel.className = isOnline ? "text-[#FF4500] font-black text-xs tracking-[0.2em]" : "text-gray-400 font-black text-xs tracking-[0.2em]";
             
             btn.classList.toggle('online');
             document.getElementById('btn-text').innerText = isOnline ? "STOP" : "GO";
@@ -125,20 +165,20 @@
         function exibirRota(o) {
             document.getElementById('order-panel').classList.add('active');
             document.getElementById('order-content').innerHTML = `
-                <div class="flex justify-between items-start mb-4">
-                    <h3 class="text-2xl font-black">${o.client_name}</h3>
-                    <span class="bg-black text-white px-3 py-1 rounded-lg text-sm font-bold">#${o.id.slice(-4)}</span>
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-2xl font-black uppercase">${o.client_name}</h3>
+                    <span class="text-xs font-bold text-gray-400">ID: ${o.id.slice(-4)}</span>
                 </div>
-                <p class="text-[#FF4500] font-black mb-6 text-2xl">R$ ${o.price}</p>
-                <div class="bg-gray-100 p-4 rounded-xl mb-6 text-sm text-gray-700 border border-gray-200">
-                    <i class="fas fa-map-marker-alt mr-2 text-[#FF4500]"></i>${o.address}
+                <p class="text-[#FF4500] font-black mb-6 text-3xl italic">R$ ${o.price}</p>
+                <div class="bg-gray-50 border border-gray-100 p-5 rounded-2xl mb-6 text-sm text-gray-600 font-medium">
+                    <i class="fas fa-location-dot mr-2 text-[#FF4500]"></i>${o.address}
                 </div>
-                <button onclick="concluir('${o.id}')" class="w-full bg-[#FF4500] text-white p-5 rounded-xl font-black text-xl shadow-lg active:scale-95 transition">CONCLUIR ENTREGA</button>
+                <button onclick="concluir('${o.id}')" class="w-full bg-[#FF4500] text-white p-5 rounded-2xl font-black text-xl shadow-lg active:scale-95 transition">FINALIZAR ENTREGA</button>
             `;
         }
 
         async function concluir(id) {
-            if(!confirm("Deseja finalizar esta entrega?")) return;
+            if(!confirm("Confirmar entrega concluída?")) return;
             await fetch(`${API_URL}/complete-delivery`, { 
                 method: "POST", 
                 headers: { "Content-Type": "application/json" }, 
@@ -155,14 +195,14 @@
             const res = await fetch(`${API_URL}/api/driver-history/${STORE_SLUG}/${fone}`);
             const data = await res.json();
             document.getElementById('history-content').innerHTML = data.map(h => `
-                <div class="bg-gray-50 p-4 rounded-xl flex justify-between items-center border border-gray-100">
+                <div class="bg-gray-50 p-4 rounded-2xl flex justify-between items-center border border-gray-100">
                     <div>
                         <p class="font-bold text-black">${h.client_name}</p>
-                        <p class="text-xs text-gray-500">${new Date(h.completed_at).toLocaleDateString()}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">${new Date(h.completed_at).toLocaleDateString()}</p>
                     </div>
                     <span class="text-[#FF4500] font-black italic">R$ ${h.price}</span>
                 </div>
-            `).join('') || '<p class="text-center text-gray-400">Nenhuma entrega concluída hoje.</p>';
+            `).join('') || '<p class="text-center text-gray-300 font-bold py-10">SEM ENTREGAS HOJE</p>';
         }
 
         function abrirMapa() { document.getElementById('history-panel').classList.remove('active'); }
@@ -175,10 +215,10 @@
                     driverMarker.setLatLng([latitude, longitude]);
                 } else {
                     driverMarker = L.circleMarker([latitude, longitude], { 
-                        radius: 10, color: '#fff', weight: 3, fillColor: '#FF4500', fillOpacity: 1 
+                        radius: 10, color: '#fff', weight: 4, fillColor: '#FF4500', fillOpacity: 1 
                     }).addTo(map);
                 }
-                map.flyTo([latitude, longitude], 16);
+                map.flyTo([latitude, longitude], 17);
                 socket.emit("driver_location", { 
                     store_slug: STORE_SLUG, 
                     driver_name: localStorage.getItem('driver_name'), 
