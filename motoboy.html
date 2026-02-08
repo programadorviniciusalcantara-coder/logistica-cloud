@@ -10,93 +10,36 @@
     <style>
         body { background-color: #000; color: white; overflow: hidden; position: fixed; width: 100%; height: 100%; font-family: 'Inter', sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; filter: grayscale(0.5) contrast(1.2); }
-        
-        /* Barra de Status Superior */
-        .status-bar {
-            position: fixed; top: 0; left: 0; right: 0; height: 60px;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(15px);
-            z-index: 100; display: flex; align-items: center; justify-content: center;
-            border-bottom: 1px solid #222;
-        }
-
-        /* Botão GO Circular (Uber Style) */
-        .go-button {
-            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 90px; height: 90px; background: #2563eb; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 900; font-size: 22px; color: white; border: 5px solid #000;
-            box-shadow: 0 0 25px rgba(37, 99, 235, 0.5); z-index: 101; cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .go-button.online { background: #ef4444; box-shadow: 0 0 25px rgba(239, 68, 68, 0.5); }
-
-        /* Animação de Onda (Pulse) */
-        .pulse {
-            position: absolute; width: 100%; height: 100%;
-            background: inherit; border-radius: 50%;
-            animation: pulse-animation 2s infinite; z-index: -1;
-        }
-        @keyframes pulse-animation {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(2.5); opacity: 0; }
-        }
-
-        /* Card de Informações do Pedido */
-        .bottom-sheet {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            background: #121212; border-radius: 24px 24px 0 0;
-            z-index: 110; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: translateY(105%); padding: 25px;
-            box-shadow: 0 -15px 40px rgba(0,0,0,0.9);
-        }
+        .status-bar { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); z-index: 100; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #222; }
+        .go-button { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; background: #2563eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; color: white; border: 5px solid #000; box-shadow: 0 0 25px rgba(37, 99, 235, 0.4); z-index: 101; cursor: pointer; transition: 0.4s; }
+        .go-button.online { background: #ef4444; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 80px; background: #121212; display: flex; align-items: center; justify-content: space-around; z-index: 150; border-top: 1px solid #222; }
+        .bottom-sheet { position: fixed; bottom: 80px; left: 0; right: 0; background: #121212; border-radius: 24px 24px 0 0; z-index: 110; transition: 0.5s; transform: translateY(105%); padding: 25px; box-shadow: 0 -15px 40px rgba(0,0,0,0.9); max-height: 70vh; overflow-y: auto; }
         .bottom-sheet.active { transform: translateY(0); }
-
-        /* Tela de Login Profissional */
-        #login-screen {
-            position: fixed; inset: 0; background: #000; z-index: 500;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px;
-        }
-        .input-uber {
-            width: 100%; max-width: 320px; background: #1a1a1a; border: 1px solid #333;
-            padding: 20px; border-radius: 12px; color: white; font-size: 18px;
-            margin-bottom: 15px; outline: none; transition: 0.3s;
-        }
-        .input-uber:focus { border-color: #2563eb; background: #222; }
+        #login-screen { position: fixed; inset: 0; background: #000; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
-        <div class="mb-12 text-center">
-            <div class="w-20 h-24 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-6 text-4xl font-black italic shadow-2xl shadow-blue-900/40">iG</div>
-            <h1 class="text-3xl font-bold tracking-tight">Uber <span class="text-blue-500 text-sm align-top">Driver Style</span></h1>
-            <p class="text-slate-500 mt-2">Faça login para começar a dirigir</p>
-        </div>
-        
-        <input type="text" id="driver-id" class="input-uber" placeholder="Nome do Motorista" autocomplete="off">
-        <input type="tel" id="driver-phone" class="input-uber" placeholder="Telefone ou CPF" autocomplete="off">
-        
-        <button onclick="tentarLogin()" class="w-full max-w-[320px] bg-white text-black p-5 rounded-xl font-black text-lg uppercase tracking-tighter hover:bg-slate-200 transition">
-            Avançar
-        </button>
+        <div class="mb-10 text-center"><div class="w-20 h-24 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-6 text-4xl font-black italic">iG</div><h1 class="text-3xl font-bold">iGO Driver</h1></div>
+        <input type="text" id="login-name" class="w-full max-w-xs bg-zinc-900 border border-zinc-800 p-5 rounded-xl mb-4 text-white text-lg" placeholder="Seu Nome">
+        <input type="tel" id="login-phone" class="w-full max-w-xs bg-zinc-900 border border-zinc-800 p-5 rounded-xl mb-6 text-white text-lg" placeholder="Telefone (ID Único)">
+        <button onclick="fazerLogin()" class="w-full max-w-xs bg-white text-black p-5 rounded-xl font-black text-lg uppercase">Começar</button>
     </div>
 
-    <div class="status-bar">
-        <span class="text-slate-400 font-bold text-sm tracking-widest" id="status-text">OFFLINE</span>
-    </div>
-
+    <div class="status-bar"><span class="text-slate-400 font-bold text-sm tracking-widest" id="status-text">OFFLINE</span></div>
     <div id="map"></div>
 
-    <div id="btn-main" class="go-button" onclick="toggleStatus()">
-        <div id="pulse-effect"></div>
-        <span id="btn-text">GO</span>
-    </div>
+    <div id="btn-main" class="go-button" onclick="toggleStatus()"><span id="btn-text">GO</span></div>
 
-    <div class="bottom-sheet" id="order-panel">
-        <div class="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mb-8"></div>
-        <div id="order-content">
-            </div>
-    </div>
+    <div class="bottom-sheet" id="order-panel"><div class="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mb-8"></div><div id="order-content"></div></div>
+    <div class="bottom-sheet" id="history-panel"><div class="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mb-8"></div><h2 class="text-2xl font-bold mb-6">Minhas Entregas</h2><div id="history-content" class="space-y-4"></div></div>
+
+    <nav class="bottom-nav">
+        <button onclick="abrirMapa()" class="text-blue-500 flex flex-col items-center"><i class="fas fa-map text-xl"></i><span class="text-[10px] mt-1">Mapa</span></button>
+        <button onclick="abrirHistorico()" class="text-slate-500 flex flex-col items-center"><i class="fas fa-list text-xl"></i><span class="text-[10px] mt-1">Atividade</span></button>
+    </nav>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -104,173 +47,84 @@
         const API_URL = "https://logistica-igo.onrender.com";
         const urlParams = new URLSearchParams(window.location.search);
         const STORE_SLUG = urlParams.get('store') || 'igo-iphones';
-        
-        let socket, map, driverMarker;
-        let isOnline = false;
+        let socket, map, driverMarker, isOnline = false;
 
-        // 1. Lógica de Persistência (Verifica se já está logado)
-        window.onload = () => {
-            const driverName = localStorage.getItem('driver_name');
-            if(driverName) {
-                // Se já tem nome salvo, pula a tela de login
-                document.getElementById('login-screen').style.display = 'none';
-                iniciarApp();
-            }
-        };
+        window.onload = () => { if(localStorage.getItem('driver_phone')) { document.getElementById('login-screen').style.display = 'none'; iniciarApp(); } };
 
-        function tentarLogin() {
-            const nome = document.getElementById('driver-id').value;
-            const fone = document.getElementById('driver-phone').value;
-
-            if(!nome || !fone) {
-                alert("Por favor, preencha todos os campos.");
-                return;
-            }
-
-            // Salva no navegador (igual ao app do Uber)
+        function fazerLogin() {
+            const nome = document.getElementById('login-name').value;
+            const fone = document.getElementById('login-phone').value;
+            if(!nome || !fone) return alert("Preencha tudo!");
             localStorage.setItem('driver_name', nome);
             localStorage.setItem('driver_phone', fone);
-
-            // Animação de saída
-            document.getElementById('login-screen').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('login-screen').style.display = 'none';
-                iniciarApp();
-            }, 500);
+            document.getElementById('login-screen').style.display = 'none';
+            iniciarApp();
         }
 
         function iniciarApp() {
-            initMap();
-            conectarSocket();
-        }
-
-        function initMap() {
-            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-8.05428, -34.8813], 15);
+            map = L.map('map', { zoomControl: false }).setView([-8.05428, -34.8813], 15);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-        }
-
-        function conectarSocket() {
             socket = io(API_URL);
             socket.emit("join_store", STORE_SLUG);
-            
-            socket.on("refresh_admin", () => {
-                if(isOnline) buscarMinhaRota();
-            });
+            socket.on("refresh_admin", () => { if(isOnline) buscarRota(); });
         }
 
         function toggleStatus() {
             isOnline = !isOnline;
             const btn = document.getElementById('btn-main');
-            const pulse = document.getElementById('pulse-effect');
-            const txt = document.getElementById('btn-text');
-            const statusTxt = document.getElementById('status-text');
-
-            if(isOnline) {
-                btn.classList.add('online');
-                pulse.classList.add('pulse');
-                txt.innerText = "OFF";
-                statusTxt.innerText = "ONLINE";
-                statusTxt.classList.replace('text-slate-400', 'text-blue-500');
-                startGPS();
-                buscarMinhaRota();
-            } else {
-                btn.classList.remove('online');
-                pulse.classList.remove('pulse');
-                txt.innerText = "GO";
-                statusTxt.innerText = "OFFLINE";
-                statusTxt.classList.replace('text-blue-500', 'text-slate-400');
-                stopGPS();
-                document.getElementById('order-panel').classList.remove('active');
-            }
+            document.getElementById('status-text').innerText = isOnline ? "ONLINE" : "OFFLINE";
+            btn.classList.toggle('online');
+            if(isOnline) { startGPS(); buscarRota(); } else { stopGPS(); document.getElementById('order-panel').classList.remove('active'); }
         }
 
-        async function buscarMinhaRota() {
-            if(!isOnline) return;
-            const nome = localStorage.getItem('driver_name');
+        async function buscarRota() {
+            const fone = localStorage.getItem('driver_phone');
             const res = await fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`);
             const data = await res.json();
-            
-            const rota = data.activeOrders.find(o => o.driver_name.toLowerCase() === nome.toLowerCase());
-
-            if(rota) {
-                exibirPainelRota(rota);
-            } else {
-                document.getElementById('order-panel').classList.remove('active');
-            }
+            const rota = data.activeOrders.find(o => o.driver_phone === fone);
+            if(rota) exibirRota(rota); else document.getElementById('order-panel').classList.remove('active');
         }
 
-        function exibirPainelRota(o) {
+        function exibirRota(o) {
             document.getElementById('order-panel').classList.add('active');
             document.getElementById('order-content').innerHTML = `
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <p class="text-blue-500 font-black text-xs uppercase tracking-widest mb-1">Nova Corrida</p>
-                        <h3 class="text-2xl font-bold">${o.client_name}</h3>
-                    </div>
-                    <div class="bg-green-600/20 px-3 py-1 rounded-lg">
-                        <span class="text-green-500 font-black text-xl">R$ ${o.price}</span>
-                    </div>
-                </div>
-                
-                <div class="bg-zinc-900 p-5 rounded-2xl mb-8 border border-zinc-800">
-                    <div class="flex items-center gap-4">
-                        <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-                        <p class="text-slate-300 text-sm">${o.address}</p>
-                    </div>
-                </div>
-
-                <div class="flex gap-3 mb-4">
-                    <button onclick="abrirNavegador('google', '${o.address}')" class="flex-1 bg-zinc-800 p-4 rounded-xl font-bold flex items-center justify-center gap-2">
-                        <i class="fab fa-google text-red-500"></i> Maps
-                    </button>
-                    <button onclick="abrirNavegador('waze', '${o.address}')" class="flex-1 bg-zinc-800 p-4 rounded-xl font-bold flex items-center justify-center gap-2">
-                        <i class="fab fa-waze text-blue-400"></i> Waze
-                    </button>
-                </div>
-
-                <button onclick="concluirEntrega('${o.id}')" class="w-full bg-blue-600 p-5 rounded-2xl font-black text-xl active:scale-95 transition">
-                    CONCLUIR ENTREGA
-                </button>
+                <h3 class="text-2xl font-bold mb-1">${o.client_name}</h3>
+                <p class="text-green-500 font-black mb-6 text-xl">Ganho: R$ ${o.price}</p>
+                <div class="bg-zinc-900 p-4 rounded-xl mb-6 text-sm text-slate-300">${o.address}</div>
+                <button onclick="concluir('${o.id}')" class="w-full bg-blue-600 p-5 rounded-xl font-black text-xl">CONCLUIR</button>
             `;
         }
 
-        function abrirNavegador(app, addr) {
-            const dest = encodeURIComponent(addr + ", Recife, PE");
-            if(app === 'google') window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
-            else window.open(`https://waze.com/ul?q=${dest}&navigate=yes`, '_blank');
+        async function concluir(id) {
+            await fetch(`${API_URL}/complete-delivery`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: id, store_slug: STORE_SLUG }) });
+            document.getElementById('order-panel').classList.remove('active');
+            buscarRota();
         }
 
-        async function concluirEntrega(id) {
-            await fetch(`${API_URL}/complete-delivery`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId: id, store_slug: STORE_SLUG })
-            });
+        async function abrirHistorico() {
             document.getElementById('order-panel').classList.remove('active');
-            buscarMinhaRota();
+            document.getElementById('history-panel').classList.add('active');
+            const fone = localStorage.getItem('driver_phone');
+            const res = await fetch(`${API_URL}/api/driver-history/${STORE_SLUG}/${fone}`);
+            const data = await res.json();
+            document.getElementById('history-content').innerHTML = data.map(h => `
+                <div class="bg-zinc-900 p-4 rounded-xl flex justify-between items-center">
+                    <div><p class="font-bold">${h.client_name}</p><p class="text-xs text-slate-500">${new Date(h.completed_at).toLocaleDateString()}</p></div>
+                    <span class="text-green-500 font-bold">R$ ${h.price}</span>
+                </div>
+            `).join('') || '<p class="text-center text-slate-500">Nenhuma entrega hoje</p>';
         }
+
+        function abrirMapa() { document.getElementById('history-panel').classList.remove('active'); }
 
         function startGPS() {
-            if ("geolocation" in navigator) {
-                navigator.geolocation.watchPosition(pos => {
-                    const { latitude, longitude } = pos.coords;
-                    if(driverMarker) driverMarker.setLatLng([latitude, longitude]);
-                    else driverMarker = L.circleMarker([latitude, longitude], { radius: 10, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }).addTo(map);
-                    
-                    map.flyTo([latitude, longitude], 16, { animate: true, duration: 2 });
-                    
-                    socket.emit("driver_location", {
-                        store_slug: STORE_SLUG,
-                        driver_name: localStorage.getItem('driver_name'),
-                        lat: latitude, lng: longitude
-                    });
-                }, null, { enableHighAccuracy: true });
-            }
-        }
-
-        function stopGPS() {
-            if(driverMarker) map.removeLayer(driverMarker);
-            driverMarker = null;
+            navigator.geolocation.watchPosition(pos => {
+                const { latitude, longitude } = pos.coords;
+                if(driverMarker) driverMarker.setLatLng([latitude, longitude]);
+                else driverMarker = L.circleMarker([latitude, longitude], { radius: 10, color: '#fff', fillColor: '#2563eb', fillOpacity: 1 }).addTo(map);
+                map.flyTo([latitude, longitude], 16);
+                socket.emit("driver_location", { store_slug: STORE_SLUG, driver_name: localStorage.getItem('driver_name'), lat: latitude, lng: longitude });
+            }, null, { enableHighAccuracy: true });
         }
     </script>
 </body>
