@@ -14,12 +14,12 @@
             --sidebar-bg: #000000; 
         }
         
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; height: 100vh; overflow: hidden; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; height: 100vh; overflow: hidden; color: #000; }
 
         .sidebar { width: 250px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; z-index: 10; }
         .logo-box { padding: 30px 20px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #222; }
         
-        /* Ajuste da Logo iGO */
+        /* Box da Logo iGO */
         .igo-logo { 
             width: 80px; 
             height: 80px; 
@@ -200,7 +200,26 @@
         }
 
         function maskMoney(i) { let v = i.value.replace(/\D/g, "") / 100; i.value = v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
-        function maskPhone(i) { let v = i.value.replace(/\D/g,"").substring(0,11); if(v.length > 2) v = `(${v.substring(0,2)}) ${v.substring(2)}`; if(v.length > 4) v = `(${v.substring(0,2)}) ${v.substring(3,4)} ${v.substring(4)}`; if(v.length > 9) v = `(${v.substring(0,2)}) ${v.substring(3,4)} ${v.substring(4,8)}-${v.substring(8)}`; i.value = v; }
+        
+        // --- FUNÇÃO CORRIGIDA: (xx) x xxxx-xxxx ---
+        function maskPhone(i) {
+            let v = i.value.replace(/\D/g, ""); // Remove tudo que não é número
+            if (v.length > 11) v = v.substring(0, 11); // Limita a 11 dígitos
+
+            if (v.length > 0) {
+                v = "(" + v;
+            }
+            if (v.length > 3) {
+                v = v.substring(0, 3) + ") " + v.substring(3);
+            }
+            if (v.length > 6) {
+                v = v.substring(0, 6) + " " + v.substring(6);
+            }
+            if (v.length > 11) {
+                v = v.substring(0, 11) + "-" + v.substring(11);
+            }
+            i.value = v;
+        }
 
         async function refreshData() {
             const res = await fetch('/api/dashboard'); globalData = await res.json();
@@ -223,7 +242,7 @@
                     <b>${o.clientName}</b><br><small>Moto: ${o.driverName}</small>
                     <div style="display:flex; gap:5px; margin-top:5px;">
                         <button onclick="focarRota('${o.id}')" style="flex:1; padding:8px; border-radius:5px; border:1px solid #ddd; background:white;">Mapa</button>
-                        <button class="btn-link" onclick="enviarLinkCliente('${o.id}', '${o.phone}', '${o.clientName}')">Zap Link</button>
+                        <button class="btn-link" onclick="enviarLinkCliente('${o.id}', '${o.phone}', '${o.clientName}')">WhatsApp</button>
                     </div>
                 </div>
             `).join('');
@@ -242,7 +261,7 @@
 
         async function despachar(id) { const d = document.getElementById('sel-'+id).value; if(!d) return; await fetch('/assign-order', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({orderId: id, driverSocketId: d}) }); refreshData(); }
         
-        // SENHA ATUALIZADA 2026
+        // SENHA ATUALIZADA: Abraao2026123
         async function delHist(id) { if(prompt("Senha:")==="Abraao2026123") await fetch('/delete-history/'+id, {method:'DELETE'}); refreshData(); }
         async function fullReset() { if(prompt("Senha:")==="Abraao2026123") { await fetch('/api/reset-system', {method:'POST'}); location.reload(); } }
 
