@@ -8,10 +8,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <style>
-        /* TEMA TOTALMENTE CLARO - iGO iPHONES */
+        /* TEMA iGO iPHONES - CLARO, LARANJA E PRETO */
+        :root {
+            --igo-orange: #FF4500;
+            --igo-black: #000000;
+            --igo-white: #FFFFFF;
+        }
+
         body { 
-            background-color: #FFFFFF; 
-            color: #000000; 
+            background-color: var(--igo-white); 
+            color: var(--igo-black); 
             overflow: hidden; 
             position: fixed; 
             width: 100%; 
@@ -19,7 +25,7 @@
             font-family: 'Inter', sans-serif; 
         }
         
-        /* Mapa Limpo e Claro */
+        /* Mapa Limpo e Claro (White Map) */
         #map { height: 100vh; width: 100%; z-index: 1; }
         
         .status-bar { 
@@ -32,31 +38,31 @@
         /* Botão GO - Laranja iGO */
         .go-button { 
             position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); 
-            width: 85px; height: 85px; background: #FF4500; border-radius: 50%; 
+            width: 85px; height: 85px; background: var(--igo-orange); border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
-            font-weight: 900; font-size: 20px; color: white; border: 5px solid #FFFFFF; 
+            font-weight: 900; font-size: 20px; color: white; border: 5px solid var(--igo-white); 
             box-shadow: 0 10px 25px rgba(255, 69, 0, 0.4); z-index: 101; 
             cursor: pointer; transition: 0.4s; 
         }
-        .go-button.online { background: #000000; border-color: #FF4500; }
+        .go-button.online { background: var(--igo-black); border-color: var(--igo-orange); }
         
         .bottom-nav { 
             position: fixed; bottom: 0; left: 0; right: 0; height: 80px; 
-            background: #FFFFFF; display: flex; align-items: center; 
+            background: var(--igo-white); display: flex; align-items: center; 
             justify-content: space-around; z-index: 150; border-top: 1px solid #eee; 
         }
         
         .bottom-sheet { 
-            position: fixed; bottom: 80px; left: 0; right: 0; background: #FFFFFF; 
+            position: fixed; bottom: 80px; left: 0; right: 0; background: var(--igo-white); 
             border-radius: 24px 24px 0 0; z-index: 110; transition: 0.5s; 
             transform: translateY(105%); padding: 25px; 
             box-shadow: 0 -15px 40px rgba(0,0,0,0.1); max-height: 70vh; 
-            overflow-y: auto; color: #000; 
+            overflow-y: auto; color: var(--igo-black); 
         }
         .bottom-sheet.active { transform: translateY(0); }
         
         #login-screen { 
-            position: fixed; inset: 0; background: #FFFFFF; z-index: 500; 
+            position: fixed; inset: 0; background: var(--igo-white); z-index: 500; 
             display: flex; flex-direction: column; align-items: center; 
             justify-content: center; padding: 30px; 
         }
@@ -64,15 +70,21 @@
         .input-igo {
             background: #f9f9f9; border: 1px solid #ddd; color: #000;
         }
+
+        /* Container para o Canvas da Logo */
+        #logo-wrap { width: 130px; height: 130px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
+        canvas { max-width: 100%; max-height: 100%; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <div class="mb-10 text-center">
-            <img src="logo.jpg" class="w-32 h-32 object-contain mx-auto mb-6" alt="iGO Logo">
-            <h1 class="text-3xl font-bold text-black">iGO Driver</h1>
-            <p class="text-gray-500 font-medium mt-2">Parceiro de Entregas</p>
+            <div id="logo-wrap">
+                <canvas id="logoCanvas"></canvas>
+            </div>
+            <h1 class="text-3xl font-bold text-black italic">iGO <span class="text-[#FF4500]">DRIVER</span></h1>
+            <p class="text-gray-500 font-bold text-xs tracking-widest mt-2 uppercase">Parceiro de Entregas</p>
         </div>
         <input type="text" id="login-name" class="w-full max-w-xs input-igo p-5 rounded-2xl mb-4 text-lg outline-none focus:border-[#FF4500]" placeholder="Seu Nome">
         <input type="tel" id="login-phone" class="w-full max-w-xs input-igo p-5 rounded-2xl mb-6 text-lg outline-none focus:border-[#FF4500]" placeholder="Telefone (ID Único)">
@@ -94,7 +106,7 @@
 
     <div class="bottom-sheet" id="history-panel">
         <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8"></div>
-        <h2 class="text-2xl font-bold mb-6">Minha Atividade</h2>
+        <h2 class="text-2xl font-bold mb-6 italic">Minha Atividade</h2>
         <div id="history-content" class="space-y-4"></div>
     </div>
 
@@ -110,8 +122,29 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // MANTENDO TODA A SUA LÓGICA ORIGINAL DE CONEXÃO
-        const API_URL = "https://logistica-igo.onrender.com";
+        // --- PROGRAMAÇÃO DA LOGO: TRANSPARÊNCIA AUTOMÁTICA ---
+        const canvas = document.getElementById('logoCanvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.src = 'logo.png'; // Referência ao arquivo logo.png que você subiu
+        
+        img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                // Remove pixels pretos (R, G, B < 45) para transparência no fundo branco
+                if (data[i] < 45 && data[i+1] < 45 && data[i+2] < 45) {
+                    data[i+3] = 0; 
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+        };
+
+        // --- LÓGICA DE CONEXÃO ATUALIZADA (VERCEL) ---
+        const API_URL = "https://jv-log.vercel.app";
         const urlParams = new URLSearchParams(window.location.search);
         const STORE_SLUG = urlParams.get('store') || 'igo-iphones';
         let socket, map, driverMarker, isOnline = false;
@@ -129,7 +162,7 @@
         }
 
         function iniciarApp() {
-            // MAPA CLARO (Estilo Positron)
+            // MAPA CLARO (Estilo Positron / Light All)
             map = L.map('map', { zoomControl: false }).setView([-8.05428, -34.8813], 15);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; CARTO'
@@ -166,14 +199,14 @@
             document.getElementById('order-panel').classList.add('active');
             document.getElementById('order-content').innerHTML = `
                 <div class="flex justify-between items-start mb-2">
-                    <h3 class="text-2xl font-black uppercase">${o.client_name}</h3>
+                    <h3 class="text-2xl font-black uppercase text-black">${o.client_name}</h3>
                     <span class="text-xs font-bold text-gray-400">ID: ${o.id.slice(-4)}</span>
                 </div>
                 <p class="text-[#FF4500] font-black mb-6 text-3xl italic">R$ ${o.price}</p>
                 <div class="bg-gray-50 border border-gray-100 p-5 rounded-2xl mb-6 text-sm text-gray-600 font-medium">
                     <i class="fas fa-location-dot mr-2 text-[#FF4500]"></i>${o.address}
                 </div>
-                <button onclick="concluir('${o.id}')" class="w-full bg-[#FF4500] text-white p-5 rounded-2xl font-black text-xl shadow-lg active:scale-95 transition">FINALIZAR ENTREGA</button>
+                <button onclick="concluir('${o.id}')" class="w-full bg-[#FF4500] text-white p-5 rounded-2xl font-black text-xl shadow-lg active:scale-95 transition">CONCLUIR ENTREGA</button>
             `;
         }
 
@@ -202,7 +235,7 @@
                     </div>
                     <span class="text-[#FF4500] font-black italic">R$ ${h.price}</span>
                 </div>
-            `).join('') || '<p class="text-center text-gray-300 font-bold py-10">SEM ENTREGAS HOJE</p>';
+            `).join('') || '<p class="text-center text-gray-300 font-bold py-10 uppercase text-xs">Sem atividade hoje</p>';
         }
 
         function abrirMapa() { document.getElementById('history-panel').classList.remove('active'); }
