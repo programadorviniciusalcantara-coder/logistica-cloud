@@ -16,11 +16,11 @@
         
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; height: 100vh; overflow: hidden; color: #000; }
 
-        /* Sidebar */
         .sidebar { width: 250px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid #222; }
         .logo-box { padding: 30px 20px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #222; }
         
-        /* Container da Logo (Canvas) */
+        /* LOGO */
+        .igo-logo { width: 80px; height: 80px; border: 2px solid var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: transparent; overflow: hidden; }
         #logo-container { width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
         canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 
@@ -28,7 +28,6 @@
         .nav-item i { margin-right: 12px; }
         .nav-item:hover, .nav-item.active { background: #111; color: var(--primary); border-right: 4px solid var(--primary); }
 
-        /* Main Content */
         .main { flex: 1; padding: 30px; overflow-y: auto; display: none; height: 100vh; box-sizing: border-box; }
         .main.active { display: block; }
         
@@ -43,15 +42,17 @@
         .msg.admin { background: var(--primary); color: white; align-self: flex-end; }
         .msg.driver { background: #f1f5f9; color: #000; align-self: flex-start; border: 1px solid #e2e8f0; }
 
-        /* MAPAS - FORÇANDO A ALTURA COM !IMPORTANT */
+        /* MAPAS - FORÇANDO A ALTURA E VISIBILIDADE */
         #map, #map-cadastro { 
             width: 100%; 
             height: 500px !important; 
             min-height: 500px !important; 
             border-radius: 15px; 
             border: 1px solid #eee; 
-            background: #eee; 
+            background: #e5e5e5; 
             display: block;
+            position: relative;
+            z-index: 1;
         }
 
         .order-card { background: white; border: 1px solid #eee; border-left: 5px solid var(--primary); border-radius: 10px; padding: 15px; margin-bottom: 10px; }
@@ -141,9 +142,9 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- CONFIGURAÇÃO CRÍTICA DE CONEXÃO ---
-        // Se estiver no Vercel, esse é o seu Backend.
-        const API_URL = "https://jv-log.vercel.app"; 
+        // --- AQUI ESTÁ A CORREÇÃO DA CONEXÃO ---
+        // Usamos o Render para o SERVIDOR (Backend) e o Vercel para o SITE (Frontend)
+        const API_URL = "https://logistica-igo.onrender.com"; 
         
         const socket = io(API_URL);
         let globalData = { pendingOrders: [], activeOrders: [], drivers: [], history: [] };
@@ -167,7 +168,7 @@
             ctx.putImageData(imageData, 0, 0);
         };
 
-        // --- INICIALIZAÇÃO DOS MAPAS ---
+        // --- MAPAS: INICIALIZAÇÃO E CORREÇÃO ---
         function initMaps() {
             if (!map) {
                 map = L.map('map', { zoomControl: false }).setView([-8.0592, -34.8996], 13);
@@ -180,54 +181,42 @@
             }
         }
 
-        // --- CARREGAMENTO INICIAL ---
-        window.onload = () => {
-            initMaps();
-            refreshData(); // Carrega os dados assim que abre
+        window.onload = () => { 
+            initMaps(); 
+            // Pequeno delay para garantir que o mapa carregue
+            setTimeout(() => {
+                if(map) map.invalidateSize();
+                if(mapCad) mapCad.invalidateSize();
+            }, 1000);
+            refreshData(); 
         };
 
-        // --- NAVEGAÇÃO ENTRE ABAS (COM CORREÇÃO DE MAPA) ---
         function nav(id) {
             document.querySelectorAll('.main').forEach(d => d.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(d => d.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             
-            // "PULO DO GATO": Força o mapa a redesenhar após 200ms
+            // FORÇA O MAPA A APARECER
             setTimeout(() => {
                 if (id === 'monitoramento' && map) map.invalidateSize();
                 if (id === 'novo-pedido' && mapCad) mapCad.invalidateSize();
-            }, 200);
+            }, 300);
         }
 
-        // --- CHAT ---
-        function sendMsg() {
-            const t = document.getElementById('chat-txt').value; if(!t.trim()) return;
-            socket.emit('send_chat_message', { to: 'admin', text: t, from: 'Admin' });
-            document.getElementById('chat-txt').value = '';
-        }
-
-        socket.on('new_chat_message', (data) => {
-            const box = document.getElementById('chat-msgs');
-            const d = document.createElement('div');
-            d.className = data.from === 'Admin' ? 'msg admin' : 'msg driver';
-            d.innerHTML = `<b>${data.from === 'Admin' ? 'Central' : data.from}:</b> ${data.text}`;
-            box.appendChild(d); box.scrollTop = box.scrollHeight;
-        });
-
-        // --- ATUALIZAR DADOS (GET) ---
+        // --- LÓGICA DE DADOS ---
         async function refreshData() {
             try {
-                // USA A API_URL CORRETA
                 const res = await fetch(`${API_URL}/api/dashboard`);
+                if (!res.ok) throw new Error("Falha ao conectar");
                 globalData = await res.json();
                 
                 document.getElementById('dash-money').innerText = globalData.history.reduce((a, b) => a + (b.price||0), 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
                 document.getElementById('dash-pending').innerText = globalData.pendingOrders.length;
                 document.getElementById('dash-active').innerText = globalData.activeOrders.length;
 
-                // Lista de Pendentes
-                const pendingList = document.getElementById('pending-list');
-                pendingList.innerHTML = globalData.pendingOrders.map(o => `
+                // Atualiza Lista Pendentes
+                const listP = document.getElementById('pending-list');
+                listP.innerHTML = globalData.pendingOrders.map(o => `
                     <div class="order-card">
                         <b>${o.clientName}</b><br><small>${o.address}</small>
                         <div style="display:flex; gap:10px; margin-top:10px;">
@@ -238,9 +227,9 @@
                             <button class="btn-dispatch" onclick="despachar('${o.id}')">Enviar</button>
                         </div>
                     </div>
-                `).join('') || '<p style="color:#999; text-align:center; padding:20px;">Sem pedidos pendentes.</p>';
+                `).join('') || '<p style="color:#aaa; text-align:center; padding:20px;">Nenhum pedido pendente.</p>';
 
-                // Lista de Monitoramento
+                // Atualiza Monitoramento
                 document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
                     <div style="padding:15px; border-bottom:1px solid #eee;">
                         <b>${o.clientName}</b><br><small>Moto: ${o.driverName}</small>
@@ -249,31 +238,28 @@
                         </div>
                     </div>
                 `).join('');
-                
+
                 // Histórico
                 document.getElementById('history-body').innerHTML = globalData.history.map(h => `
                     <tr><td>${h.completedAt}</td><td>${h.clientName}</td><td>R$ ${(h.price||0).toFixed(2)}</td><td>${h.driverName}</td><td><button onclick="delHist('${h.id}')" style="color:red; border:none; background:none; cursor:pointer;">🗑️</button></td></tr>
                 `).join('');
-
+                
             } catch (e) {
-                console.error("Erro de conexão:", e);
+                console.log("Servidor Render dormindo ou offline...");
             }
         }
 
-        // --- SALVAR PEDIDO (POST) ---
         async function saveOrder() {
             const btn = document.getElementById('btn-create');
             const name = document.getElementById('np-name').value;
-            
-            if(!name) return alert("O nome do cliente é obrigatório!");
+            if(!name) return alert("Preencha o nome!");
 
-            btn.innerText = "⏳ SALVANDO NO SERVIDOR..."; 
+            btn.innerText = "⏳ CONECTANDO AO SERVIDOR..."; 
             btn.disabled = true;
 
             const price = parseFloat(document.getElementById('np-price').value.replace('R$','').replace('.','').replace(',','.').trim()) || 0;
             
             try {
-                // TENTA CONECTAR NO BACKEND CORRETO
                 const res = await fetch(`${API_URL}/register-delivery`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -288,24 +274,34 @@
                 });
 
                 if(res.ok) {
-                    alert("✅ Pedido Criado com Sucesso!");
-                    // Limpa tudo
+                    alert("✅ Pedido Criado!");
                     document.querySelectorAll('#novo-pedido input').forEach(i => i.value = '');
-                    btn.innerText = "CRIAR E GERAR RASTREIO"; 
-                    btn.disabled = false;
-                    
-                    // Volta pra home e atualiza
+                    btn.innerText = "CRIAR E GERAR RASTREIO"; btn.disabled = false;
                     nav('dashboard');
-                    setTimeout(refreshData, 500); 
+                    setTimeout(refreshData, 1000);
                 } else {
                     throw new Error("Erro no servidor");
                 }
             } catch (e) {
-                alert("❌ ERRO AO SALVAR!\nOcorreu um erro de conexão com: " + API_URL + "\nVerifique se o servidor está rodando.");
+                alert("❌ ERRO: O servidor do Render parece estar desligado.\nAcesse dashboard.render.com para verificar.");
                 btn.innerText = "TENTAR NOVAMENTE"; 
                 btn.disabled = false;
             }
         }
+
+        // Outras Funções
+        function sendMsg() {
+            const t = document.getElementById('chat-txt').value; if(!t.trim()) return;
+            socket.emit('send_chat_message', { to: 'admin', text: t, from: 'Admin' });
+            document.getElementById('chat-txt').value = '';
+        }
+        socket.on('new_chat_message', (data) => {
+            const box = document.getElementById('chat-msgs');
+            const d = document.createElement('div');
+            d.className = data.from === 'Admin' ? 'msg admin' : 'msg driver';
+            d.innerHTML = `<b>${data.from === 'Admin' ? 'Central' : data.from}:</b> ${data.text}`;
+            box.appendChild(d); box.scrollTop = box.scrollHeight;
+        });
 
         async function despachar(id) {
             const dId = document.getElementById('sel-'+id).value;
@@ -327,7 +323,6 @@
             }
         }
 
-        // Máscaras e Utilitários
         function maskMoney(i) { let v = i.value.replace(/\D/g, "") / 100; i.value = v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
         function maskPhone(i) {
             let v = i.value.replace(/\D/g, "");
@@ -339,7 +334,6 @@
             i.value = v;
         }
 
-        // Lógica de Focar Rota
         function focarRota(id) {
             routeLayer.clearLayers(); 
             const o = globalData.activeOrders.find(x => x.id === id);
