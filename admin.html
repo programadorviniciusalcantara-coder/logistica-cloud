@@ -16,11 +16,11 @@
         
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; height: 100vh; overflow: hidden; color: #000; }
 
+        /* Sidebar */
         .sidebar { width: 250px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid #222; }
         .logo-box { padding: 30px 20px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #222; }
         
         /* LOGO */
-        .igo-logo { width: 80px; height: 80px; border: 2px solid var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: transparent; overflow: hidden; }
         #logo-container { width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
         canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 
@@ -142,17 +142,17 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- AQUI ESTÁ A CORREÇÃO DA CONEXÃO ---
-        // Usamos o Render para o SERVIDOR (Backend) e o Vercel para o SITE (Frontend)
+        // CONFIGURAÇÃO CORRETA DO SERVIDOR SUPABASE/RENDER
         const API_URL = "https://logistica-igo.onrender.com"; 
-        
+        const STORE_SLUG = "igo-iphones"; // Identificador da loja
+
         const socket = io(API_URL);
-        let globalData = { pendingOrders: [], activeOrders: [], drivers: [], history: [] };
+        let globalData = { pendingOrders: [], activeOrders: [], history: [] };
         let map, mapCad, routeLayer;
         let markers = {};
         const lightTile = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
-        // --- PROGRAMAÇÃO DA LOGO: TRANSPARÊNCIA ---
+        // --- PROGRAMAÇÃO DA LOGO ---
         const canvas = document.getElementById('logoCanvas');
         const ctx = canvas.getContext('2d');
         const img = new Image();
@@ -168,7 +168,7 @@
             ctx.putImageData(imageData, 0, 0);
         };
 
-        // --- MAPAS: INICIALIZAÇÃO E CORREÇÃO ---
+        // --- INICIALIZAÇÃO MAPAS ---
         function initMaps() {
             if (!map) {
                 map = L.map('map', { zoomControl: false }).setView([-8.0592, -34.8996], 13);
@@ -183,12 +183,14 @@
 
         window.onload = () => { 
             initMaps(); 
-            // Pequeno delay para garantir que o mapa carregue
+            // Conecta na "sala" da loja
+            socket.emit("join_store", STORE_SLUG);
+            refreshData(); 
+            
             setTimeout(() => {
                 if(map) map.invalidateSize();
                 if(mapCad) mapCad.invalidateSize();
             }, 1000);
-            refreshData(); 
         };
 
         function nav(id) {
@@ -196,74 +198,75 @@
             document.querySelectorAll('.nav-item').forEach(d => d.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             
-            // FORÇA O MAPA A APARECER
             setTimeout(() => {
                 if (id === 'monitoramento' && map) map.invalidateSize();
                 if (id === 'novo-pedido' && mapCad) mapCad.invalidateSize();
             }, 300);
         }
 
-        // --- LÓGICA DE DADOS ---
+        // --- DADOS DO SERVIDOR (GET) ---
         async function refreshData() {
             try {
-                const res = await fetch(`${API_URL}/api/dashboard`);
-                if (!res.ok) throw new Error("Falha ao conectar");
+                // Rota corrigida para bater com o server.js: /api/dashboard/:store
+                const res = await fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`);
+                if (!res.ok) throw new Error("Erro na API");
+                
                 globalData = await res.json();
                 
-                document.getElementById('dash-money').innerText = globalData.history.reduce((a, b) => a + (b.price||0), 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                // Atualiza Cards
+                document.getElementById('dash-money').innerText = globalData.history.reduce((a, b) => a + parseFloat(b.price||0), 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
                 document.getElementById('dash-pending').innerText = globalData.pendingOrders.length;
                 document.getElementById('dash-active').innerText = globalData.activeOrders.length;
 
-                // Atualiza Lista Pendentes
-                const listP = document.getElementById('pending-list');
-                listP.innerHTML = globalData.pendingOrders.map(o => `
+                // Lista de Pendentes
+                document.getElementById('pending-list').innerHTML = globalData.pendingOrders.map(o => `
                     <div class="order-card">
-                        <b>${o.clientName}</b><br><small>${o.address}</small>
+                        <b>${o.client_name}</b><br><small>${o.address}</small>
                         <div style="display:flex; gap:10px; margin-top:10px;">
-                            <select id="sel-${o.id}" style="padding:5px; border-radius:5px; border:1px solid #ddd; flex:1;">
-                                <option value="">Moto...</option>
-                                ${globalData.drivers.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
-                            </select>
+                            <input type="text" id="driver-name-${o.id}" placeholder="Nome do Motoboy" style="padding:8px; border:1px solid #ddd; border-radius:5px; flex:1;">
+                            <input type="text" id="driver-phone-${o.id}" placeholder="Telefone" style="padding:8px; border:1px solid #ddd; border-radius:5px; width:100px;">
                             <button class="btn-dispatch" onclick="despachar('${o.id}')">Enviar</button>
                         </div>
                     </div>
-                `).join('') || '<p style="color:#aaa; text-align:center; padding:20px;">Nenhum pedido pendente.</p>';
+                `).join('') || '<p style="color:#aaa; text-align:center;">Sem pedidos pendentes.</p>';
 
-                // Atualiza Monitoramento
+                // Lista Monitoramento
                 document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
                     <div style="padding:15px; border-bottom:1px solid #eee;">
-                        <b>${o.clientName}</b><br><small>Moto: ${o.driverName}</small>
+                        <b>${o.client_name}</b><br><small>Moto: ${o.driver_name}</small>
                         <div style="display:flex; gap:5px; margin-top:10px;">
                             <button onclick="focarRota('${o.id}')" style="flex:1; padding:8px; border-radius:5px; border:1px solid #eee; background:#fff; font-weight:bold;">Ver no Mapa</button>
                         </div>
                     </div>
                 `).join('');
-
+                
                 // Histórico
                 document.getElementById('history-body').innerHTML = globalData.history.map(h => `
-                    <tr><td>${h.completedAt}</td><td>${h.clientName}</td><td>R$ ${(h.price||0).toFixed(2)}</td><td>${h.driverName}</td><td><button onclick="delHist('${h.id}')" style="color:red; border:none; background:none; cursor:pointer;">🗑️</button></td></tr>
+                    <tr><td>${new Date(h.completed_at).toLocaleDateString()}</td><td>${h.client_name}</td><td>R$ ${parseFloat(h.price||0).toFixed(2)}</td><td>${h.driver_name}</td><td><span style="color:green">Concluído</span></td></tr>
                 `).join('');
-                
+
             } catch (e) {
-                console.log("Servidor Render dormindo ou offline...");
+                console.error("Erro de conexão:", e);
             }
         }
 
+        // --- SALVAR PEDIDO (POST) ---
         async function saveOrder() {
             const btn = document.getElementById('btn-create');
             const name = document.getElementById('np-name').value;
+            
             if(!name) return alert("Preencha o nome!");
-
-            btn.innerText = "⏳ CONECTANDO AO SERVIDOR..."; 
-            btn.disabled = true;
+            btn.innerText = "⏳ SALVANDO..."; btn.disabled = true;
 
             const price = parseFloat(document.getElementById('np-price').value.replace('R$','').replace('.','').replace(',','.').trim()) || 0;
             
             try {
+                // Rota corrigida com store_slug
                 const res = await fetch(`${API_URL}/register-delivery`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ 
+                        store_slug: STORE_SLUG,
                         clientName: name, 
                         price, 
                         phone: document.getElementById('np-phone').value, 
@@ -279,34 +282,31 @@
                     btn.innerText = "CRIAR E GERAR RASTREIO"; btn.disabled = false;
                     nav('dashboard');
                     setTimeout(refreshData, 1000);
-                } else {
-                    throw new Error("Erro no servidor");
-                }
+                } else { throw new Error(); }
+
             } catch (e) {
-                alert("❌ ERRO: O servidor do Render parece estar desligado.\nAcesse dashboard.render.com para verificar.");
-                btn.innerText = "TENTAR NOVAMENTE"; 
+                alert("❌ Erro ao salvar! Verifique a conexão com o servidor Supabase.");
                 btn.disabled = false;
             }
         }
 
-        // Outras Funções
-        function sendMsg() {
-            const t = document.getElementById('chat-txt').value; if(!t.trim()) return;
-            socket.emit('send_chat_message', { to: 'admin', text: t, from: 'Admin' });
-            document.getElementById('chat-txt').value = '';
-        }
-        socket.on('new_chat_message', (data) => {
-            const box = document.getElementById('chat-msgs');
-            const d = document.createElement('div');
-            d.className = data.from === 'Admin' ? 'msg admin' : 'msg driver';
-            d.innerHTML = `<b>${data.from === 'Admin' ? 'Central' : data.from}:</b> ${data.text}`;
-            box.appendChild(d); box.scrollTop = box.scrollHeight;
-        });
-
+        // --- ATRIBUIR ROTA (POST) ---
         async function despachar(id) {
-            const dId = document.getElementById('sel-'+id).value;
-            if(!dId) return alert("Selecione um motoboy!");
-            await fetch(`${API_URL}/assign-order`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({orderId: id, driverSocketId: dId}) });
+            const dName = document.getElementById('driver-name-'+id).value;
+            const dPhone = document.getElementById('driver-phone-'+id).value;
+            
+            if(!dName || !dPhone) return alert("Preencha Nome e Telefone do Motoboy!");
+            
+            await fetch(`${API_URL}/assign-order`, { 
+                method: 'POST', 
+                headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify({ 
+                    store_slug: STORE_SLUG,
+                    orderId: id, 
+                    driverName: dName,
+                    driverPhone: dPhone
+                }) 
+            });
             refreshData();
         }
 
@@ -334,25 +334,35 @@
             i.value = v;
         }
 
+        // Chat Simples (Sem banco de dados por enquanto)
+        function sendMsg() {
+            const t = document.getElementById('chat-txt').value; if(!t.trim()) return;
+            // O chat é volátil nesse modelo, apenas via Socket
+            socket.emit('send_chat_message', { to: 'admin', text: t, from: 'Admin' }); 
+            document.getElementById('chat-txt').value = '';
+        }
+
+        // Focar Rota no Mapa
         function focarRota(id) {
             routeLayer.clearLayers(); 
             const o = globalData.activeOrders.find(x => x.id === id);
             if(o) {
-                L.marker([o.storeCoords.lat, o.storeCoords.lng], {icon: L.divIcon({html:'<div style="background:#000;width:12px;height:12px;border-radius:50%;border:2px solid white"></div>', className:''})}).addTo(routeLayer);
-                L.marker([o.destCoords.lat, o.destCoords.lng], {icon: L.divIcon({html:'<div style="background:#FF4500;width:14px;height:14px;border-radius:50%;border:2px solid white"></div>', className:''})}).addTo(routeLayer);
-                map.setView([o.destCoords.lat, o.destCoords.lng], 14);
+                // Coordenadas fixas da loja (Recife) ou dinâmicas se tiver
+                const storeLat = -8.0592, storeLng = -34.8996; 
+                L.marker([storeLat, storeLng], {icon: L.divIcon({html:'<div style="background:#000;width:12px;height:12px;border-radius:50%;border:2px solid white"></div>', className:''})}).addTo(routeLayer);
+                L.marker([o.lat, o.lng], {icon: L.divIcon({html:'<div style="background:#FF4500;width:14px;height:14px;border-radius:50%;border:2px solid white"></div>', className:''})}).addTo(routeLayer);
+                map.setView([o.lat, o.lng], 14);
             }
         }
 
-        socket.on('update_map', (data) => {
-            if(!markers[data.socketId]) markers[data.socketId] = L.marker([data.lat, data.lng], {icon: L.divIcon({html:'<div style="font-size:20px">🏍️</div>', className:'', iconSize:[30,30]})}).addTo(map);
-            else markers[data.socketId].setLatLng([data.lat, data.lng]);
-        });
+        async function fullReset() { alert("Função desabilitada no modo Banco de Dados (Segurança)."); }
 
-        async function fullReset() { if(prompt("Senha:")==="Abraao2026123") { await fetch(`${API_URL}/api/reset-system`, {method:'POST'}); location.reload(); } }
-        async function delHist(id) { if(prompt("Senha:")==="Abraao2026123") { await fetch(`${API_URL}/delete-history/`+id, {method:'DELETE'}); refreshData(); } }
-        
+        // Ouve atualizações do servidor
         socket.on('refresh_admin', refreshData);
+        socket.on('update_map', (data) => {
+             if(!markers[data.driver_name]) markers[data.driver_name] = L.marker([data.lat, data.lng], {icon: L.divIcon({html:'<div style="font-size:20px">🏍️</div>', className:''})}).addTo(map);
+             else markers[data.driver_name].setLatLng([data.lat, data.lng]);
+        });
     </script>
 </body>
 </html>
