@@ -4,95 +4,139 @@
     <meta charset="UTF-8">
     <title>Admin | iGo iPhones</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --primary: #FF4500; --bg: #FFFFFF; --sidebar-bg: #000000; --success: #22c55e; --danger: #ef4444; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; height: 100vh; overflow: hidden; color: #000; }
-        .sidebar { width: 250px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid #222; }
-        .logo-box { padding: 30px 20px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #222; }
-        #logo-container { width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-        canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .nav-item { padding: 15px 25px; cursor: pointer; display: flex; align-items: center; color: #aaa; transition: 0.2s; font-weight: 600; }
-        .nav-item:hover, .nav-item.active { background: #111; color: var(--primary); border-right: 4px solid var(--primary); }
-        .main { flex: 1; padding: 30px; overflow-y: auto; display: none; height: 100vh; box-sizing: border-box; }
-        .main.active { display: block; }
-        .cards-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .card .value { font-size: 28px; font-weight: 800; color: #000; }
-        .chat-frame { background: white; border: 1px solid #eee; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; height: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .chat-body { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; background: #fdfdfd; }
-        .msg { padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; max-width: 85%; font-size: 13px; }
-        .msg.admin { background: var(--primary); color: white; align-self: flex-end; }
-        .msg.driver { background: #f1f5f9; color: #000; align-self: flex-start; border: 1px solid #e2e8f0; }
-        #map, #map-cadastro { width: 100%; height: 500px !important; min-height: 500px !important; border-radius: 15px; border: 1px solid #eee; background: #e5e5e5; display: block; position: relative; z-index: 1; }
-        .order-card { background: white; border: 1px solid #eee; border-left: 5px solid var(--primary); border-radius: 10px; padding: 15px; margin-bottom: 10px; }
-        .form-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 5px; color: #64748b; }
-        .input-group input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; }
-        .btn-save, .btn-dispatch { width: 100%; background: var(--primary); color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-dispatch { padding: 10px; width: auto; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
         
-        /* Estilo do Dropdown */
-        select { padding: 10px; border-radius: 5px; border: 1px solid #ddd; flex: 1; font-weight: bold; background: white; }
+        :root { --primary: #FF4500; --bg: #F3F4F6; --sidebar-bg: #050505; --success: #10B981; --danger: #EF4444; }
+        
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); display: flex; height: 100vh; overflow: hidden; color: #1F2937; }
+
+        /* Sidebar Profissional */
+        .sidebar { width: 260px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 20px rgba(0,0,0,0.1); }
+        .logo-box { padding: 40px 20px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #222; margin-bottom: 20px; }
+        #logo-container { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; background: white; border-radius: 20px; padding: 10px; }
+        canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        .nav-item { padding: 16px 30px; cursor: pointer; display: flex; align-items: center; color: #9CA3AF; transition: 0.3s; font-weight: 600; font-size: 14px; margin-bottom: 5px; }
+        .nav-item i { margin-right: 15px; width: 20px; text-align: center; font-size: 16px; }
+        .nav-item:hover, .nav-item.active { background: #1F1F1F; color: var(--primary); border-right: 4px solid var(--primary); }
+
+        .main { flex: 1; padding: 40px; overflow-y: auto; display: none; height: 100vh; box-sizing: border-box; }
+        .main.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Cards Dashboard */
+        .cards-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-bottom: 40px; }
+        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #E5E7EB; display: flex; flex-direction: column; justify-content: space-between; }
+        .card h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #6B7280; margin: 0 0 10px 0; font-weight: 700; }
+        .card .value { font-size: 32px; font-weight: 800; color: #111; }
+        .card-icon { align-self: flex-end; font-size: 24px; opacity: 0.2; }
+
+        /* Estilos Gerais */
+        h2 { font-size: 24px; font-weight: 800; color: #111; margin-top: 0; margin-bottom: 30px; letter-spacing: -0.5px; }
+        
+        /* Mapas */
+        #map, #map-cadastro { width: 100%; height: 500px !important; min-height: 500px !important; border-radius: 20px; border: 4px solid white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); background: #e5e5e5; display: block; position: relative; z-index: 1; }
+        
+        /* Pedidos */
+        .order-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 6px solid var(--primary); transition: 0.2s; }
+        .order-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        
+        /* Forms */
+        .form-layout { display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 11px; font-weight: 700; margin-bottom: 8px; color: #4B5563; text-transform: uppercase; letter-spacing: 0.5px; }
+        .input-group input { width: 100%; padding: 15px; border: 1px solid #E5E7EB; border-radius: 12px; box-sizing: border-box; font-size: 15px; transition: 0.2s; background: #F9FAFB; }
+        .input-group input:focus { border-color: var(--primary); background: white; outline: none; box-shadow: 0 0 0 3px rgba(255, 69, 0, 0.1); }
+        
+        .btn-save { width: 100%; background: #111; color: white; padding: 18px; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.2s; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-save:hover { background: var(--primary); transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255, 69, 0, 0.2); }
+        
+        .btn-dispatch { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; transition: 0.2s; }
+        .btn-dispatch:hover { background: #e03e00; }
+
+        select { padding: 12px; border-radius: 8px; border: 1px solid #E5E7EB; flex: 1; font-weight: 600; background: #F9FAFB; color: #374151; cursor: pointer; }
+
+        /* Tabela Histórico */
+        table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+        th { text-align: left; padding: 15px; color: #9CA3AF; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+        td { background: white; padding: 20px; font-size: 14px; font-weight: 600; color: #374151; }
+        tr td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+        tr td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <div class="logo-box"><div id="logo-container"><canvas id="logoCanvas"></canvas></div><p style="font-weight: 900; margin-top: 15px; color: var(--primary);">iGo iPhones</p></div>
-        <div class="nav-item active" onclick="nav('dashboard')"><i class="fas fa-home"></i> Painel</div>
+        <div class="logo-box">
+            <div id="logo-container"><canvas id="logoCanvas"></canvas></div>
+            <p style="font-weight: 900; margin-top: 15px; color: var(--primary); letter-spacing: 1px;">iGo iPhones</p>
+        </div>
+        <div class="nav-item active" onclick="nav('dashboard')"><i class="fas fa-home"></i> Painel Geral</div>
         <div class="nav-item" onclick="nav('novo-pedido')"><i class="fas fa-plus-circle"></i> Novo Pedido</div>
-        <div class="nav-item" onclick="nav('monitoramento')"><i class="fas fa-map-marked-alt"></i> Monitoramento</div>
-        <div class="nav-item" onclick="nav('historico')"><i class="fas fa-history"></i> Histórico</div>
-        <div class="nav-item" onclick="location.reload()" style="color:var(--danger); margin-top:auto"><i class="fas fa-sync"></i> Atualizar</div>
+        <div class="nav-item" onclick="nav('monitoramento')"><i class="fas fa-map-marked-alt"></i> Rastreio</div>
+        <div class="nav-item" onclick="nav('historico')"><i class="fas fa-history"></i> Relatórios</div>
+        <div class="nav-item" onclick="location.reload()" style="color:var(--danger); margin-top:auto"><i class="fas fa-sync-alt"></i> Atualizar</div>
     </div>
 
     <div id="dashboard" class="main active">
-        <h2 style="font-weight: 900;">Painel de Controle</h2>
+        <h2>Visão Geral</h2>
         <div class="cards-container">
-            <div class="card" style="border-left:5px solid var(--success)"><h3>Faturamento</h3><div class="value" id="dash-money">R$ 0,00</div></div>
-            <div class="card" style="border-left:5px solid var(--primary)"><h3>Pendentes</h3><div class="value" id="dash-pending">0</div></div>
-            <div class="card" style="border-left:5px solid #000"><h3>Motoboys Online</h3><div class="value" id="dash-drivers">0</div></div>
+            <div class="card" style="border-left:5px solid var(--success)">
+                <h3>Faturamento do Dia</h3><div class="value" id="dash-money">R$ 0,00</div><i class="fas fa-dollar-sign card-icon" style="color:var(--success)"></i>
+            </div>
+            <div class="card" style="border-left:5px solid var(--primary)">
+                <h3>Pedidos Pendentes</h3><div class="value" id="dash-pending">0</div><i class="fas fa-clock card-icon" style="color:var(--primary)"></i>
+            </div>
+            <div class="card" style="border-left:5px solid #111">
+                <h3>Motoboys Online</h3><div class="value" id="dash-drivers">0</div><i class="fas fa-motorcycle card-icon" style="color:#111"></i>
+            </div>
         </div>
-        <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap: 25px;">
-            <div><h3>Pedidos Aguardando</h3><div id="pending-list"></div></div>
-            <div class="chat-frame">
-                <div style="padding:15px; font-weight:bold; background:#000; color: #fff;">Chat Central</div>
-                <div id="chat-msgs" class="chat-body"></div>
-                <div style="padding:10px; display:flex; gap:5px; background: #f8fafc; border-top: 1px solid #eee;">
-                    <input type="text" id="chat-txt" placeholder="Mensagem..." style="flex:1; padding:10px; border:1px solid #ddd; border-radius:5px; outline:none;">
-                    <button onclick="sendMsg()" style="background:var(--primary); color:white; border:none; padding:8px 15px; border-radius:5px; font-weight:bold;">Enviar</button>
+        <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap: 30px;">
+            <div>
+                <h3 style="margin-bottom:20px; color:#6B7280; font-size:14px; text-transform:uppercase; font-weight:700;">Aguardando Motoboy</h3>
+                <div id="pending-list"></div>
+            </div>
+            <div class="chat-frame" style="background:white; border-radius:16px; padding:20px; box-shadow:0 4px 6px rgba(0,0,0,0.05);">
+                <h3 style="margin-top:0; color:#111;">Chat Central</h3>
+                <div id="chat-msgs" style="height:300px; overflow-y:auto; background:#F9FAFB; border-radius:12px; padding:15px; margin-bottom:15px; border:1px solid #E5E7EB;"></div>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="chat-txt" placeholder="Mensagem..." style="flex:1; padding:12px; border:1px solid #ddd; border-radius:8px;">
+                    <button onclick="sendMsg()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold;"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
         </div>
     </div>
 
     <div id="novo-pedido" class="main">
-        <h2 style="font-weight: 900;">Novo Pedido</h2>
+        <h2>Cadastrar Entrega</h2>
         <div class="form-layout">
-            <div>
-                <div class="input-group"><label>CLIENTE</label><input type="text" id="np-name" placeholder="Nome Completo"></div>
-                <div class="input-group"><label>VALOR (R$)</label><input type="text" id="np-price" oninput="maskMoney(this)" placeholder="R$ 0,00"></div>
-                <div class="input-group"><label>WHATSAPP</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16" placeholder="(81) 9 ...."></div>
-                <div class="input-group"><label>ENDEREÇO</label><input type="text" id="np-addr" onblur="buscarEndereco()" placeholder="Rua, Bairro, Número"></div>
+            <div style="background:white; padding:30px; border-radius:20px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.05);">
+                <div class="input-group"><label>Nome do Cliente</label><input type="text" id="np-name" placeholder="Ex: Maria Silva"></div>
+                <div class="input-group"><label>Valor (R$)</label><input type="text" id="np-price" oninput="maskMoney(this)" placeholder="R$ 0,00"></div>
+                <div class="input-group"><label>WhatsApp</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16" placeholder="(81) 9 0000-0000"></div>
+                <div class="input-group"><label>Endereço Completo</label><input type="text" id="np-addr" onblur="buscarEndereco()" placeholder="Rua, Número, Bairro - Recife"></div>
                 <input type="hidden" id="np-lat"><input type="hidden" id="np-lng">
-                <button id="btn-create" class="btn-save" onclick="saveOrder()">CRIAR PEDIDO</button>
+                <button id="btn-create" class="btn-save" onclick="saveOrder()">CRIAR PEDIDO E RASTREIO</button>
             </div>
             <div id="map-cadastro"></div>
         </div>
     </div>
 
     <div id="monitoramento" class="main">
-        <h2 style="font-weight: 900;">Monitoramento</h2>
-        <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px;">
-            <div id="monitor-list" style="background:white; padding:10px; border-radius:12px; overflow-y:auto; border:1px solid #eee; height: 600px;"></div>
+        <h2>Monitoramento em Tempo Real</h2>
+        <div style="display: grid; grid-template-columns: 350px 1fr; gap: 30px;">
+            <div id="monitor-list" style="background:white; padding:20px; border-radius:20px; overflow-y:auto; height: 600px; box-shadow:0 4px 6px rgba(0,0,0,0.05);"></div>
             <div id="map"></div>
         </div>
     </div>
 
     <div id="historico" class="main">
-        <h2 style="font-weight: 900;">Histórico</h2>
-        <table style="width: 100%; border-collapse: collapse; background: white;"><tbody id="history-body"></tbody></table>
+        <h2>Histórico de Entregas</h2>
+        <table>
+            <thead><tr><th>Data</th><th>Cliente</th><th>Valor</th><th>Motoboy</th><th>Ação</th></tr></thead>
+            <tbody id="history-body"></tbody>
+        </table>
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -127,50 +171,86 @@
                 document.getElementById('dash-pending').innerText = globalData.pendingOrders.length;
                 document.getElementById('dash-drivers').innerText = (globalData.drivers || []).length; 
 
-                // --- CRIA A LISTA DE OPÇÕES DE MOTOBOYS ---
+                // Lista de Motoboys para o Dropdown
                 const driversOptions = (globalData.drivers || []).map(d => `<option value="${d.name}|${d.phone}">${d.name} (Online)</option>`).join('');
                 
-                // --- INSERE O SELECT (DROPDOWN) NO LUGAR DOS INPUTS ---
+                // PENDENTES
                 document.getElementById('pending-list').innerHTML = globalData.pendingOrders.map(o => `
                     <div class="order-card">
-                        <b>${o.client_name}</b><br><small>${o.address}</small>
-                        <div style="display:flex; gap:10px; margin-top:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <span style="font-weight:800; font-size:16px;">${o.client_name}</span>
+                            <span style="background:#f3f4f6; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700;">R$ ${parseFloat(o.price).toFixed(2)}</span>
+                        </div>
+                        <div style="color:#6B7280; font-size:13px; margin-bottom:15px;"><i class="fas fa-map-marker-alt" style="color:var(--primary)"></i> ${o.address}</div>
+                        <div style="display:flex; gap:10px;">
                             <select id="sel-${o.id}">
-                                <option value="">Selecione Motoboy...</option>
+                                <option value="">Selecione o Motoboy...</option>
                                 ${driversOptions}
                             </select>
-                            <button class="btn-dispatch" onclick="despachar('${o.id}')">Enviar</button>
+                            <button class="btn-dispatch" onclick="despachar('${o.id}')"><i class="fas fa-paper-plane"></i></button>
                         </div>
                     </div>
-                `).join('') || '<p style="color:#aaa; text-align:center;">Sem pedidos pendentes.</p>';
+                `).join('') || '<p style="color:#aaa; text-align:center; padding:20px;">Nenhum pedido pendente.</p>';
 
+                // MONITORAMENTO (COM BOTÃO DE ENVIAR LINK)
                 document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
-                    <div style="padding:15px; border-bottom:1px solid #eee;">
-                        <b>${o.client_name}</b><br><small>Moto: ${o.driver_name}</small>
-                        <div style="display:flex; gap:5px; margin-top:10px;"><button onclick="focarRota('${o.id}')" style="flex:1; padding:8px; border:1px solid #eee; background:#fff;">Ver no Mapa</button></div>
+                    <div style="padding:20px; border-bottom:1px solid #eee; background:#F9FAFB; border-radius:12px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <b>${o.client_name}</b>
+                            <span style="color:var(--success); font-weight:bold;">Em Rota</span>
+                        </div>
+                        <small style="color:#6B7280;">Moto: ${o.driver_name}</small>
+                        <div style="display:flex; gap:10px; margin-top:15px;">
+                            <button onclick="focarRota('${o.id}')" style="flex:1; padding:10px; border:1px solid #E5E7EB; background:white; border-radius:8px; font-weight:bold; cursor:pointer;">Mapa</button>
+                            <button onclick="enviarLink('${o.phone}', '${o.client_name}')" style="flex:1; padding:10px; border:none; background:#25D366; color:white; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fab fa-whatsapp"></i> Link</button>
+                        </div>
                     </div>
                 `).join('');
                 
-                document.getElementById('history-body').innerHTML = globalData.history.map(h => `<tr><td>${new Date(h.completed_at).toLocaleDateString()}</td><td>${h.client_name}</td><td>R$ ${parseFloat(h.price).toFixed(2)}</td><td>${h.driver_name}</td></tr>`).join('');
+                // HISTÓRICO (COM BOTÃO DE EXCLUIR)
+                document.getElementById('history-body').innerHTML = globalData.history.map(h => `
+                    <tr>
+                        <td>${new Date(h.completed_at).toLocaleDateString()}</td>
+                        <td>${h.client_name}</td>
+                        <td style="font-weight:800;">R$ ${parseFloat(h.price).toFixed(2)}</td>
+                        <td>${h.driver_name}</td>
+                        <td><button onclick="delHist('${h.id}')" style="color:var(--danger); background:none; border:none; cursor:pointer; font-size:16px;"><i class="fas fa-trash-alt"></i></button></td>
+                    </tr>
+                `).join('');
+
             } catch (e) { console.error(e); }
         }
 
         async function saveOrder() {
-            const btn = document.getElementById('btn-create'); btn.innerText = "⏳..."; btn.disabled = true;
+            const btn = document.getElementById('btn-create'); btn.innerText = "⏳ SALVANDO..."; btn.disabled = true;
             try {
                 await fetch(`${API_URL}/register-delivery`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ store_slug: STORE_SLUG, clientName: document.getElementById('np-name').value, price: parseFloat(document.getElementById('np-price').value.replace('R$','').replace('.','').replace(',','.'))||0, phone: document.getElementById('np-phone').value, address: document.getElementById('np-addr').value, lat: document.getElementById('np-lat').value, lng: document.getElementById('np-lng').value }) });
-                alert("Criado!"); document.querySelectorAll('#novo-pedido input').forEach(i => i.value = ''); nav('dashboard'); refreshData();
-            } catch (e) { alert("Erro ao salvar."); }
-            btn.innerText = "CRIAR PEDIDO"; btn.disabled = false;
+                alert("PEDIDO CRIADO!"); document.querySelectorAll('#novo-pedido input').forEach(i => i.value = ''); nav('dashboard'); refreshData();
+            } catch (e) { alert("Erro de conexão."); }
+            btn.innerText = "CRIAR PEDIDO E RASTREIO"; btn.disabled = false;
         }
 
         async function despachar(id) {
             const val = document.getElementById('sel-'+id).value;
-            if(!val) return alert("Selecione um motoboy da lista!");
-            const [dName, dPhone] = val.split('|'); // Separa nome e telefone
-            
+            if(!val) return alert("Selecione um motoboy!");
+            const [dName, dPhone] = val.split('|');
             await fetch(`${API_URL}/assign-order`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ store_slug: STORE_SLUG, orderId: id, driverName: dName, driverPhone: dPhone }) });
             refreshData();
+        }
+
+        // --- FUNÇÕES REINTRODUZIDAS ---
+        function enviarLink(phone, name) {
+            // Gera um link de exemplo (como não temos a pg do cliente, manda para o site principal)
+            const link = "https://jv-log.vercel.app"; 
+            const msg = `Olá ${name}, seu pedido saiu para entrega! 🏍️\nAcompanhe aqui: ${link}`;
+            window.open(`https://wa.me/55${phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        async function delHist(id) {
+            if(prompt("Senha Master:") === "Abraao2026123") {
+                await fetch(`${API_URL}/delete-history/${id}`, {method:'DELETE'});
+                refreshData();
+            } else { alert("Senha incorreta!"); }
         }
 
         async function buscarEndereco() {
@@ -183,7 +263,7 @@
         function maskPhone(i) { let v = i.value.replace(/\D/g,""); if(v.length>11)v=v.substring(0,11); if(v.length>0)v="("+v; if(v.length>3)v=v.substring(0,3)+") "+v.substring(3); if(v.length>6)v=v.substring(0,6)+" "+v.substring(6); if(v.length>11)v=v.substring(0,11)+"-"+v.substring(11); i.value = v; }
         
         function sendMsg() { const t = document.getElementById('chat-txt').value; if(!t.trim()) return; socket.emit('send_chat_message', { to: 'admin', text: t, from: 'Admin' }); document.getElementById('chat-txt').value = ''; }
-        socket.on('new_chat_message', (d) => { const b=document.getElementById('chat-msgs'); b.innerHTML+=`<div class="msg ${d.from==='Admin'?'admin':'driver'}"><b>${d.from}:</b> ${d.text}</div>`; b.scrollTop=b.scrollHeight; });
+        socket.on('new_chat_message', (d) => { const b=document.getElementById('chat-msgs'); b.innerHTML+=`<div style="margin-bottom:10px; padding:10px; border-radius:10px; background:${d.from==='Admin'?'#111':'#e5e7eb'}; color:${d.from==='Admin'?'white':'black'}; align-self:${d.from==='Admin'?'flex-end':'flex-start'}; max-width:80%; font-size:13px;"><b>${d.from}:</b> ${d.text}</div>`; b.scrollTop=b.scrollHeight; });
 
         function focarRota(id) {
             routeLayer.clearLayers(); const o = globalData.activeOrders.find(x => x.id === id); if(o) {
@@ -191,10 +271,8 @@
             }
         }
         
-        async function fullReset() { alert("Função desabilitada no modo Banco de Dados (Segurança)."); }
-
+        async function fullReset() { alert("Função desabilitada."); }
         socket.on('refresh_admin', refreshData);
-        // Marcador no mapa agora usa o TELEFONE como chave única (mais seguro)
         socket.on('update_map', (d) => { if(!markers[d.phone]) markers[d.phone] = L.marker([d.lat, d.lng]).addTo(map); else markers[d.phone].setLatLng([d.lat, d.lng]); });
     </script>
 </body>
