@@ -3,46 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rastreio | iGO iPhones</title>
+    <title>Rastrear Pedido | iGO</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
-        body { background: #fdfdfd; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
-        #map { height: 100vh; width: 100%; z-index: 1; }
-        .search-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 350px; background: white; padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); z-index: 500; text-align: center; }
-        .tracking-panel { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 30px 30px 0 0; padding: 30px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); z-index: 500; transform: translateY(110%); transition: 0.5s; }
-        .tracking-panel.active { transform: translateY(0); }
-        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
-        .st-pending { background: #FFF4EC; color: #FF4500; }
-        .st-route { background: #E6FFFA; color: #10B981; }
+        body { background: #fdfdfd; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
+        
+        #map { height: 100%; width: 100%; z-index: 1; }
+        
+        /* CARD DESLIZANTE (Uber Style) */
+        .tracking-panel { 
+            position: fixed; bottom: 0; left: 0; right: 0; 
+            background: white; 
+            border-radius: 24px 24px 0 0; 
+            padding: 10px 25px 40px 25px; 
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.15); 
+            z-index: 500; 
+            transform: translateY(0); 
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            max-height: 80vh;
+        }
+        
+        .drag-handle { width: 40px; height: 5px; background: #e5e7eb; border-radius: 10px; margin: 10px auto 25px auto; cursor: grab; }
+
+        /* Status Badge */
+        .status-badge { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
+        .st-pending { background: #FFF7ED; color: #EA580C; border: 1px solid #FFEDD5; }
+        .st-route { background: #ECFDF5; color: #059669; border: 1px solid #D1FAE5; }
+        
+        /* Search Box Clean */
+        .search-overlay { position: fixed; inset: 0; background: white; z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
+        
+        .pulse-ring { position: relative; }
+        .pulse-ring::before { content: ''; position: absolute; inset: -10px; border-radius: 50%; background: rgba(255, 69, 0, 0.2); animation: pulse 2s infinite; z-index: -1; }
+        @keyframes pulse { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
     </style>
 </head>
 <body>
 
-    <div id="search-screen" class="search-box">
-        <h1 class="text-2xl font-black mb-2">Rastreio iGO</h1>
-        <p class="text-gray-400 text-sm mb-6">Digite seu ID ou Telefone para acompanhar.</p>
-        <input id="track-input" type="text" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl mb-4 text-center font-bold outline-none focus:border-[#FF4500]" placeholder="ID ou Telefone">
-        <button onclick="buscarManual()" class="w-full bg-black text-white p-4 rounded-xl font-black shadow-lg">RASTREAR</button>
+    <div id="search-screen" class="search-overlay">
+        <div class="mb-8 w-24 h-24 flex items-center justify-center bg-black rounded-3xl shadow-xl">
+            <i class="fas fa-box-open text-white text-4xl"></i>
+        </div>
+        <h1 class="text-3xl font-black mb-2 text-center tracking-tight">Rastrear Entrega</h1>
+        <p class="text-gray-400 text-sm font-medium mb-8 text-center max-w-xs">Digite o código do seu pedido para acompanhar em tempo real.</p>
+        
+        <div class="w-full max-w-sm">
+            <input id="track-input" type="text" class="w-full p-5 bg-gray-50 border-2 border-gray-100 rounded-2xl mb-4 text-center text-lg font-bold outline-none focus:border-[#FF4500] focus:bg-white transition" placeholder="Cole o Código Aqui (Ex: PED-12345)">
+            <button onclick="buscarManual()" class="w-full bg-[#FF4500] text-white p-5 rounded-2xl font-black text-lg shadow-lg active:scale-95 transition">RASTREAR AGORA</button>
+        </div>
     </div>
 
     <div id="map"></div>
 
-    <div id="info-panel" class="tracking-panel">
-        <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
-        <div id="status-badge" class="status-badge st-pending">AGUARDANDO</div>
-        <h2 id="client-name" class="text-2xl font-black leading-tight mb-1">Carregando...</h2>
-        <p id="driver-info" class="text-gray-500 font-medium mb-6">Procurando entregador...</p>
+    <div id="info-panel" class="tracking-panel hidden">
+        <div class="drag-handle"></div>
         
-        <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-xl">
-            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-xl">🏍️</div>
+        <div class="flex justify-between items-start mb-2">
             <div>
-                <p class="text-xs text-gray-400 font-bold uppercase">Previsão</p>
-                <p class="font-bold text-gray-800">Chegada em breve</p>
+                <div id="status-badge" class="status-badge st-pending"><i class="fas fa-circle text-[6px] mr-2"></i> AGUARDANDO</div>
+                <h2 id="client-name" class="text-2xl font-black leading-none text-gray-900 mb-1">...</h2>
+                <p class="text-xs text-gray-400 font-bold tracking-wider uppercase">Destino: Recife, PE</p>
+            </div>
+            <div id="eta-box" class="text-right hidden">
+                <p class="text-xs text-gray-400 font-bold uppercase mb-1">Chegada em</p>
+                <p id="eta-time" class="text-2xl font-black text-[#FF4500]">-- min</p>
             </div>
         </div>
+
+        <div class="mt-6 p-5 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-4">
+            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-xl border border-gray-100 pulse-ring">
+                🏍️
+            </div>
+            <div class="flex-1">
+                <p class="text-xs text-gray-400 font-bold uppercase mb-0.5">Entregador</p>
+                <p id="driver-name" class="font-bold text-gray-800 text-lg">Procurando...</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-gray-400 font-bold uppercase mb-0.5">Distância</p>
+                <p id="dist-val" class="font-bold text-gray-800">-- km</p>
+            </div>
+        </div>
+
+        <button onclick="contatoSuporte()" class="w-full mt-6 py-4 rounded-xl text-sm font-bold text-gray-400 hover:text-gray-600 transition">
+            Precisa de ajuda? Fale conosco
+        </button>
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -52,86 +99,129 @@
         const STORE_SLUG = "igo-iphones";
         const socket = io(API_URL);
         
-        let map, routeLayer, driverMarker;
+        let map, routeLayer, driverMarker, destMarker;
+        let currentOrder = null;
         const lightTile = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        
+        // Pega ID da URL (ex: ?id=PED-1234)
         const urlParams = new URLSearchParams(window.location.search);
         let currentId = urlParams.get('id');
 
         // INICIA MAPA
-        map = L.map('map', { zoomControl: false }).setView([-8.0592, -34.8996], 13);
+        map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-8.0592, -34.8996], 13);
         L.tileLayer(lightTile).addTo(map);
         routeLayer = L.layerGroup().addTo(map);
 
         if(currentId) {
-            document.getElementById('search-screen').style.display = 'none';
-            iniciarRastreio(currentId);
+            buscarManual(currentId);
         }
 
-        function buscarManual() {
-            const val = document.getElementById('track-input').value;
-            if(!val) return alert("Digite algo!");
-            // Tenta achar pelo valor digitado (ID ou Telefone)
-            iniciarRastreio(val);
-        }
-
-        async function iniciarRastreio(term) {
-            try {
-                // Busca dados gerais (Como não podemos mudar o server.js, filtramos aqui)
-                const res = await fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`);
-                const data = await res.json();
-                
-                // Procura nos pendentes ou ativos
-                let order = data.activeOrders.find(o => o.id === term || o.phone.includes(term)) || 
-                            data.pendingOrders.find(o => o.id === term || o.phone.includes(term));
-
-                if(order) {
-                    currentId = order.id; // Fixa o ID correto
-                    document.getElementById('search-screen').style.display = 'none';
-                    atualizarTela(order);
-                    
-                    // Conecta no socket para atualizações em tempo real
-                    socket.emit("join_store", STORE_SLUG);
-                    socket.on("update_map", (d) => {
-                        if(order.driver_phone && d.phone === order.driver_phone) {
-                            atualizarPosicaoMoto(d.lat, d.lng);
-                        }
-                    });
-                    socket.on("refresh_admin", () => iniciarRastreio(currentId)); // Recarrega se houver mudanças
-                } else {
-                    alert("Pedido não encontrado ou já concluído!");
-                }
-            } catch(e) { console.log(e); alert("Erro de conexão."); }
-        }
-
-        function atualizarTela(o) {
-            const panel = document.getElementById('info-panel');
-            panel.classList.add('active');
+        function buscarManual(val) {
+            const term = val || document.getElementById('track-input').value.trim();
+            if(!term) return alert("Digite o código!");
             
-            document.getElementById('client-name').innerText = o.client_name;
-            
-            const badge = document.getElementById('status-badge');
-            const driverTxt = document.getElementById('driver-info');
+            fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`)
+                .then(r => r.json())
+                .then(data => {
+                    // Busca por ID exato ou Telefone
+                    const order = data.activeOrders.find(o => o.id == term || o.phone.includes(term)) || 
+                                  data.pendingOrders.find(o => o.id == term || o.phone.includes(term));
 
-            // Limpa mapa
-            routeLayer.clearLayers();
-            // Marca Destino
-            L.marker([o.lat, o.lng], {icon: L.divIcon({html:'<div style="background:#FF4500;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3)"></div>'})}).addTo(routeLayer);
+                    if(order) {
+                        document.getElementById('search-screen').style.display = 'none';
+                        document.getElementById('info-panel').classList.remove('hidden');
+                        currentOrder = order;
+                        renderizarPedido(order);
+                        conectarSocket(order);
+                    } else {
+                        alert("Pedido não encontrado! Verifique o código.");
+                    }
+                })
+                .catch(() => alert("Erro de conexão. Tente novamente."));
+        }
+
+        function renderizarPedido(o) {
+            document.getElementById('client-name').innerText = o.client_name.split(' ')[0]; // Só o primeiro nome
+            
+            // Plota Destino
+            if(destMarker) map.removeLayer(destMarker);
+            destMarker = L.marker([o.lat, o.lng], {
+                icon: L.divIcon({
+                    html: '<div style="background:#000; width:15px; height:15px; border-radius:50%; border:3px solid white; box-shadow:0 2px 10px rgba(0,0,0,0.2);"></div>',
+                    className: ''
+                })
+            }).addTo(map);
+            
             map.setView([o.lat, o.lng], 15);
 
+            const badge = document.getElementById('status-badge');
+            const driverName = document.getElementById('driver-name');
+            const etaBox = document.getElementById('eta-box');
+
             if(o.status === 'on_route') {
-                badge.innerText = "EM ROTA";
+                badge.innerHTML = '<i class="fas fa-motorcycle mr-2"></i> SAIU PARA ENTREGA';
                 badge.className = "status-badge st-route";
-                driverTxt.innerText = `Motoboy: ${o.driver_name}`;
+                driverName.innerText = o.driver_name;
+                etaBox.classList.remove('hidden');
+                
+                // Se já tiver posição do motoboy, calcula rota
+                if(o.driver_lat) atualizarPosicaoMoto(o.driver_lat, o.driver_lng);
             } else {
-                badge.innerText = "AGUARDANDO";
+                badge.innerHTML = '<i class="fas fa-clock mr-2"></i> PREPARANDO';
                 badge.className = "status-badge st-pending";
-                driverTxt.innerText = "Preparando para envio...";
+                driverName.innerText = "Aguardando coleta...";
+                etaBox.classList.add('hidden');
             }
         }
 
+        function conectarSocket(order) {
+            socket.emit("join_store", STORE_SLUG);
+            socket.on("update_map", (d) => {
+                // Se for o motoboy deste pedido
+                if(order.driver_phone && d.phone === order.driver_phone) {
+                    atualizarPosicaoMoto(d.lat, d.lng);
+                }
+            });
+        }
+
         function atualizarPosicaoMoto(lat, lng) {
+            if(!lat || !lng) return;
+
+            // Marcador Motoboy (Ícone)
             if(driverMarker) driverMarker.setLatLng([lat, lng]);
-            else driverMarker = L.marker([lat, lng], {icon: L.divIcon({html:'<div style="font-size:24px;">🏍️</div>'})}).addTo(map);
+            else {
+                driverMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        html: '<div style="font-size:30px; filter:drop-shadow(0 5px 5px rgba(0,0,0,0.3));">🏍️</div>',
+                        className: ''
+                    })
+                }).addTo(map);
+            }
+
+            // Centraliza entre Moto e Destino
+            const group = new L.featureGroup([driverMarker, destMarker]);
+            map.fitBounds(group.getBounds(), { padding: [50, 50] });
+
+            // Cálculos Simples (Distância e Tempo)
+            const dist = getDistanceFromLatLonInKm(lat, lng, currentOrder.lat, currentOrder.lng);
+            document.getElementById('dist-val').innerText = dist.toFixed(1) + " km";
+            
+            // Vel média motoboy na cidade: 30km/h = 0.5 km/min
+            const tempo = Math.ceil(dist / 0.5); 
+            document.getElementById('eta-time').innerText = tempo + " min";
+        }
+
+        // Função de Distância (Haversine)
+        function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
+            var R = 6371; var dLat = deg2rad(lat2-lat1); var dLon = deg2rad(lon2-lon1); 
+            var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+            return R * c;
+        }
+        function deg2rad(deg) { return deg * (Math.PI/180); }
+
+        function contatoSuporte() {
+            window.open('https://wa.me/5581SEUNUMERO', '_blank');
         }
     </script>
 </body>
