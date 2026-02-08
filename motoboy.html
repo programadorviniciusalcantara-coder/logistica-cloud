@@ -23,7 +23,7 @@
         /* CARD DESLIZANTE COM ALÇA */
         .bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 30px 30px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.15); z-index: 60; transform: translateY(110%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding: 10px 20px 100px 20px; }
         .bottom-sheet.active { transform: translateY(0); }
-        .drag-handle { width: 40px; height: 5px; background: #e5e7eb; border-radius: 10px; margin: 5px auto 15px auto; }
+        .drag-handle { width: 40px; height: 5px; background: #e5e7eb; border-radius: 10px; margin: 5px auto 15px auto; cursor: grab; }
         
         .action-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 20px 0; }
         .action-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; border-radius: 16px; font-weight: 700; font-size: 12px; transition: 0.2s; }
@@ -53,7 +53,8 @@
     <div class="go-btn-container"><div id="btn-main" class="go-btn" onclick="toggle()">GO</div></div>
     
     <div class="bottom-sheet" id="order-panel">
-        <div class="drag-handle"></div> <div id="order-content"></div>
+        <div class="drag-handle" onclick="togglePanel()"></div>
+        <div id="order-content"></div>
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -86,6 +87,16 @@
             init();
         }
 
+        // Simulação do toque para abrir/fechar
+        let isExpanded = false;
+        function togglePanel() {
+            const p = document.getElementById('order-panel');
+            isExpanded = !isExpanded;
+            if(isExpanded) p.style.transform = "translateY(0)"; // Sobe tudo
+            else p.style.transform = "translateY(0)"; // Mantém no padrão (o padrão já é visível)
+            // No caso do motoboy, o padrão já é visível. Essa função é só visual se quiser expandir mais no futuro.
+        }
+
         function toggle() {
             isOnline=!isOnline;
             const btn = document.getElementById('btn-main'), badge = document.getElementById('status-badge');
@@ -114,4 +125,54 @@
                 const res = await fetch(`${API}/api/dashboard/${STORE}`);
                 const data = await res.json();
                 const me = localStorage.getItem('d_phone');
-                const order = data.activeOrders.
+                const order = data.activeOrders.find(o => o.driver_phone === me);
+                
+                const painel = document.getElementById('order-panel');
+                const content = document.getElementById('order-content');
+
+                if(order) {
+                    painel.classList.add('active');
+                    if(destMarker) map.removeLayer(destMarker);
+                    destMarker = L.marker([order.lat, order.lng], {
+                         icon: L.divIcon({html: '<div style="background:#000; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.3)"><i class="fas fa-flag-checkered"></i></div>', className: ''})
+                    }).addTo(map);
+
+                    content.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h2 class="text-2xl font-black leading-none mb-1">${order.client_name}</h2>
+                                <p class="text-sm text-gray-400 font-bold">ID #${order.id.slice(-4)}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-4 rounded-xl mt-4 border border-gray-100">
+                            <p class="text-sm text-gray-600 font-medium"><i class="fas fa-map-marker-alt text-[#FF4500] mr-2"></i>${order.address}</p>
+                        </div>
+
+                        <div class="action-grid">
+                            <a href="https://wa.me/55${order.phone.replace(/\D/g,'')}" target="_blank" class="action-btn btn-zap"><i class="fab fa-whatsapp text-2xl mb-1"></i> Zap</a>
+                            <a href="https://waze.com/ul?ll=${order.lat},${order.lng}&navigate=yes" target="_blank" class="action-btn btn-waze"><i class="fab fa-waze text-2xl mb-1"></i> Waze</a>
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=${order.lat},${order.lng}" target="_blank" class="action-btn btn-maps"><i class="fas fa-map-marked-alt text-2xl mb-1"></i> Maps</a>
+                        </div>
+
+                        <button onclick="fim('${order.id}')" class="w-full bg-black text-white p-5 rounded-2xl font-black text-lg shadow-lg active:scale-95 transition mt-2">
+                            FINALIZAR ENTREGA <i class="fas fa-check-circle ml-2"></i>
+                        </button>
+                    `;
+                } else {
+                    painel.classList.remove('active');
+                    if(destMarker) map.removeLayer(destMarker);
+                }
+            } catch(e) { console.log("Erro rota", e); }
+        }
+
+        async function fim(id) {
+            if(!confirm("Finalizou a entrega?")) return;
+            await fetch(`${API}/complete-delivery`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_slug:STORE, orderId:id}) });
+            buscarRota();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
