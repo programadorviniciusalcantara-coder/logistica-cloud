@@ -202,7 +202,7 @@
                         <small style="color:#6B7280;">Moto: ${o.driver_name}</small>
                         <div style="display:flex; gap:10px; margin-top:15px;">
                             <button onclick="focarRota('${o.id}')" style="flex:1; padding:10px; border:1px solid #E5E7EB; background:white; border-radius:8px; font-weight:bold; cursor:pointer;">Mapa</button>
-                            <button onclick="enviarLink('${o.phone}', '${o.client_name}')" style="flex:1; padding:10px; border:none; background:#25D366; color:white; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fab fa-whatsapp"></i> Link</button>
+                            <button onclick="enviarLink('${o.phone}', '${o.client_name}', '${o.id}')" style="flex:1; padding:10px; border:none; background:#25D366; color:white; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fab fa-whatsapp"></i> Link</button>
                         </div>
                     </div>
                 `).join('');
@@ -238,11 +238,10 @@
             refreshData();
         }
 
-        // --- FUNÇÕES REINTRODUZIDAS ---
-        function enviarLink(phone, name) {
-            // Gera um link de exemplo (como não temos a pg do cliente, manda para o site principal)
-            const link = "https://jv-log.vercel.app"; 
-            const msg = `Olá ${name}, seu pedido saiu para entrega! 🏍️\nAcompanhe aqui: ${link}`;
+        // FUNÇÃO DO ZAP ATUALIZADA - MANDA CÓDIGO + LINK
+        function enviarLink(phone, name, orderId) {
+            const link = "https://jv-log.vercel.app";
+            const msg = `Olá *${name}*! 👋\n\nSeu pedido iGO saiu para entrega!\n\n📍 *Rastreie aqui:* ${link}?id=${orderId}\n\nCódigo de Rastreio: *${orderId}*\n\nQualquer dúvida, estamos à disposição!`;
             window.open(`https://wa.me/55${phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
