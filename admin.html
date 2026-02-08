@@ -36,7 +36,7 @@
     <div class="sidebar">
         <div class="logo-box">
             <div class="igo-logo"><span id="sidebar-logo">iGO!</span></div>
-            <p id="store-title" style="font-weight: 900; margin-top: 10px">Loja</p>
+            <p id="store-title" style="font-weight: 900; margin-top: 10px">Carregando...</p>
         </div>
         <div class="nav-item active" onclick="nav('dashboard')"><i class="fas fa-home"></i> Painel</div>
         <div class="nav-item" onclick="nav('novo-pedido')"><i class="fas fa-plus-circle"></i> Novo Pedido</div>
@@ -61,7 +61,7 @@
             <div>
                 <div class="input-group"><label>Cliente</label><input type="text" id="np-name"></div>
                 <div class="input-group"><label>Valor (R$)</label><input type="text" id="np-price" oninput="maskMoney(this)"></div>
-                <div class="input-group"><label>WhatsApp</label><input type="text" id="np-phone" maxlength="16"></div>
+                <div class="input-group"><label>WhatsApp</label><input type="text" id="np-phone" oninput="maskPhone(this)" placeholder="(81) 9 0000-0000"></div>
                 <div class="input-group"><label>Endereço</label><input type="text" id="np-addr" onblur="buscarEndereco()"></div>
                 <input type="hidden" id="np-lat"><input type="hidden" id="np-lng">
                 <button onclick="saveOrder()" style="width:100%; background:var(--primary); color:white; padding:15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">CRIAR PEDIDO</button>
@@ -90,7 +90,6 @@
         const socket = io(API_URL);
         socket.emit("join_store", STORE_SLUG);
 
-        // Ajuste Visual
         if(STORE_SLUG === 'oxeiphone') {
             document.documentElement.style.setProperty('--primary', '#22c55e');
             document.getElementById('sidebar-logo').innerText = 'OXE!';
@@ -111,44 +110,71 @@
         let cadMarker;
 
         async function refreshData() {
-            const res = await fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`);
-            const data = await res.json();
-            
-            document.getElementById("dash-money").innerText = data.history.reduce((a, b) => a + parseFloat(b.price), 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-            document.getElementById("dash-pending").innerText = data.pendingOrders.length;
-            document.getElementById("dash-active").innerText = data.activeOrders.length;
+            try {
+                const res = await fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`);
+                const data = await res.json();
+                
+                document.getElementById("dash-money").innerText = data.history.reduce((a, b) => a + parseFloat(b.price), 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                document.getElementById("dash-pending").innerText = data.pendingOrders.length;
+                document.getElementById("dash-active").innerText = data.activeOrders.length;
 
-            document.getElementById("pending-list").innerHTML = data.pendingOrders.map(o => `
-                <div class="order-card">
-                    <b>${o.client_name}</b> - R$ ${o.price}<br><small>${o.address}</small>
-                    <div class="dispatch-controls">
-                        <input type="text" id="moto-${o.id}" placeholder="Nome Motoboy" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
-                        <button class="btn-dispatch" onclick="despachar('${o.id}')">Enviar</button>
+                document.getElementById("pending-list").innerHTML = data.pendingOrders.map(o => `
+                    <div class="order-card">
+                        <b>${o.client_name}</b> - R$ ${o.price}<br><small>${o.address}</small>
+                        <div class="dispatch-controls">
+                            <input type="text" id="moto-${o.id}" placeholder="Nome Motoboy" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
+                            <button class="btn-dispatch" onclick="despachar('${o.id}')">Enviar</button>
+                        </div>
                     </div>
-                </div>
-            `).join("");
+                `).join("");
 
-            document.getElementById("history-body").innerHTML = data.history.map(h => `
-                <tr><td>${h.client_name}</td><td>R$ ${h.price}</td><td>${h.driver_name}</td><td>${new Date(h.completed_at).toLocaleDateString()}</td></tr>
-            `).join("");
+                document.getElementById("history-body").innerHTML = data.history.map(h => `
+                    <tr><td>${h.client_name}</td><td>R$ ${h.price}</td><td>${h.driver_name}</td><td>${new Date(h.completed_at).toLocaleDateString()}</td></tr>
+                `).join("");
+            } catch (e) {
+                console.error("Erro ao carregar dados:", e);
+            }
         }
 
         async function saveOrder() {
-            const price = parseFloat(document.getElementById("np-price").value.replace(/\D/g, "")) / 100;
-            await fetch(`${API_URL}/register-delivery`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    store_slug: STORE_SLUG,
-                    clientName: document.getElementById("np-name").value,
-                    price, phone: document.getElementById("np-phone").value,
-                    address: document.getElementById("np-addr").value,
-                    lat: document.getElementById("np-lat").value, lng: document.getElementById("np-lng").value
-                })
-            });
-            alert("Pedido Criado!");
-            refreshData();
-            nav('dashboard');
+            const clientName = document.getElementById("np-name").value;
+            const priceRaw = document.getElementById("np-price").value;
+            const phone = document.getElementById("np-phone").value;
+            const address = document.getElementById("np-addr").value;
+            const lat = document.getElementById("np-lat").value;
+            const lng = document.getElementById("np-lng").value;
+
+            if(!clientName || !priceRaw || !address) {
+                alert("Preencha Nome, Valor e Endereço!");
+                return;
+            }
+
+            const price = parseFloat(priceRaw.replace(/[^\d,]/g, "").replace(",", "."));
+
+            try {
+                const response = await fetch(`${API_URL}/register-delivery`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        store_slug: STORE_SLUG,
+                        clientName, price, phone, address, lat, lng
+                    })
+                });
+
+                if(response.ok) {
+                    alert("✅ Pedido Criado com Sucesso!");
+                    document.getElementById("np-name").value = "";
+                    document.getElementById("np-price").value = "";
+                    document.getElementById("np-phone").value = "";
+                    document.getElementById("np-addr").value = "";
+                    refreshData();
+                    nav('dashboard');
+                } else {
+                    alert("❌ Erro no servidor ao criar pedido.");
+                }
+            } catch (err) {
+                alert("❌ Erro de conexão: O servidor Render pode estar ligando. Tente novamente em alguns segundos.");
+            }
         }
 
         async function despachar(id) {
@@ -164,6 +190,7 @@
 
         async function buscarEndereco() {
             const addr = document.getElementById("np-addr").value;
+            if(!addr) return;
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", Recife, PE")}`);
             const data = await res.json();
             if(data.length > 0) {
@@ -179,11 +206,26 @@
             document.querySelectorAll(".main").forEach(d => d.classList.remove("active"));
             document.getElementById(id).classList.add("active");
             if(id === 'monitoramento') setTimeout(() => map.invalidateSize(), 200);
+            if(id === 'novo-pedido') setTimeout(() => mapCad.invalidateSize(), 200);
         }
 
         function maskMoney(i) {
             let v = i.value.replace(/\D/g, "") / 100;
             i.value = v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        }
+
+        function maskPhone(i) {
+            let v = i.value.replace(/\D/g, "");
+            if (v.length > 11) v = v.substring(0, 11);
+            if (v.length <= 2) {
+                i.value = v;
+            } else if (v.length <= 3) {
+                i.value = `(${v.substring(0, 2)}) ${v.substring(2)}`;
+            } else if (v.length <= 7) {
+                i.value = `(${v.substring(0, 2)}) ${v.substring(2, 3)} ${v.substring(3)}`;
+            } else {
+                i.value = `(${v.substring(0, 2)}) ${v.substring(2, 3)} ${v.substring(3, 7)}-${v.substring(7)}`;
+            }
         }
 
         socket.on("refresh_admin", refreshData);
