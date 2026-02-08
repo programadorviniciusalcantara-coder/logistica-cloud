@@ -21,19 +21,18 @@
             padding: 10px 25px 40px 25px; 
             box-shadow: 0 -10px 40px rgba(0,0,0,0.15); 
             z-index: 500; 
-            transform: translateY(0); 
-            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transform: translateY(110%); 
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
             max-height: 80vh;
         }
+        .tracking-panel.active { transform: translateY(0); }
         
         .drag-handle { width: 40px; height: 5px; background: #e5e7eb; border-radius: 10px; margin: 10px auto 25px auto; cursor: grab; }
 
-        /* Status Badge */
         .status-badge { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
         .st-pending { background: #FFF7ED; color: #EA580C; border: 1px solid #FFEDD5; }
         .st-route { background: #ECFDF5; color: #059669; border: 1px solid #D1FAE5; }
         
-        /* Search Box Clean */
         .search-overlay { position: fixed; inset: 0; background: white; z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
         
         .pulse-ring { position: relative; }
@@ -58,7 +57,7 @@
 
     <div id="map"></div>
 
-    <div id="info-panel" class="tracking-panel hidden">
+    <div id="info-panel" class="tracking-panel">
         <div class="drag-handle"></div>
         
         <div class="flex justify-between items-start mb-2">
@@ -103,7 +102,6 @@
         let currentOrder = null;
         const lightTile = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
         
-        // Pega ID da URL (ex: ?id=PED-1234)
         const urlParams = new URLSearchParams(window.location.search);
         let currentId = urlParams.get('id');
 
@@ -123,13 +121,12 @@
             fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`)
                 .then(r => r.json())
                 .then(data => {
-                    // Busca por ID exato ou Telefone
                     const order = data.activeOrders.find(o => o.id == term || o.phone.includes(term)) || 
                                   data.pendingOrders.find(o => o.id == term || o.phone.includes(term));
 
                     if(order) {
                         document.getElementById('search-screen').style.display = 'none';
-                        document.getElementById('info-panel').classList.remove('hidden');
+                        document.getElementById('info-panel').classList.add('active');
                         currentOrder = order;
                         renderizarPedido(order);
                         conectarSocket(order);
@@ -141,9 +138,8 @@
         }
 
         function renderizarPedido(o) {
-            document.getElementById('client-name').innerText = o.client_name.split(' ')[0]; // Só o primeiro nome
+            document.getElementById('client-name').innerText = o.client_name.split(' ')[0]; 
             
-            // Plota Destino
             if(destMarker) map.removeLayer(destMarker);
             destMarker = L.marker([o.lat, o.lng], {
                 icon: L.divIcon({
@@ -164,7 +160,7 @@
                 driverName.innerText = o.driver_name;
                 etaBox.classList.remove('hidden');
                 
-                // Se já tiver posição do motoboy, calcula rota
+                // Força atualização imediata se tiver dados
                 if(o.driver_lat) atualizarPosicaoMoto(o.driver_lat, o.driver_lng);
             } else {
                 badge.innerHTML = '<i class="fas fa-clock mr-2"></i> PREPARANDO';
@@ -177,7 +173,6 @@
         function conectarSocket(order) {
             socket.emit("join_store", STORE_SLUG);
             socket.on("update_map", (d) => {
-                // Se for o motoboy deste pedido
                 if(order.driver_phone && d.phone === order.driver_phone) {
                     atualizarPosicaoMoto(d.lat, d.lng);
                 }
@@ -187,7 +182,6 @@
         function atualizarPosicaoMoto(lat, lng) {
             if(!lat || !lng) return;
 
-            // Marcador Motoboy (Ícone)
             if(driverMarker) driverMarker.setLatLng([lat, lng]);
             else {
                 driverMarker = L.marker([lat, lng], {
@@ -198,20 +192,17 @@
                 }).addTo(map);
             }
 
-            // Centraliza entre Moto e Destino
             const group = new L.featureGroup([driverMarker, destMarker]);
-            map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            map.fitBounds(group.getBounds(), { padding: [80, 80] });
 
-            // Cálculos Simples (Distância e Tempo)
             const dist = getDistanceFromLatLonInKm(lat, lng, currentOrder.lat, currentOrder.lng);
             document.getElementById('dist-val').innerText = dist.toFixed(1) + " km";
             
-            // Vel média motoboy na cidade: 30km/h = 0.5 km/min
+            // Vel média motoboy: 30km/h = 0.5 km/min
             const tempo = Math.ceil(dist / 0.5); 
             document.getElementById('eta-time').innerText = tempo + " min";
         }
 
-        // Função de Distância (Haversine)
         function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
             var R = 6371; var dLat = deg2rad(lat2-lat1); var dLon = deg2rad(lon2-lon1); 
             var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
@@ -220,9 +211,7 @@
         }
         function deg2rad(deg) { return deg * (Math.PI/180); }
 
-        function contatoSuporte() {
-            window.open('https://wa.me/5581SEUNUMERO', '_blank');
-        }
+        function contatoSuporte() { window.open('https://wa.me/5581999999999', '_blank'); }
     </script>
 </body>
 </html>
