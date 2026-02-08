@@ -1,56 +1,116 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rastreio | Entrega em Tempo Real</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iGO iPhones - Acompanhe seu pedido</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="/socket.io/socket.io.js"></script>
     <style>
-      :root { --primary: #ff4500; --dark: #000000; }
-      body { margin: 0; font-family: "Segoe UI", sans-serif; background: #f8fafc; display: flex; flex-direction: column; height: 100vh; }
-      .header { background: var(--dark); padding: 15px; text-align: center; color: white; border-bottom: 2px solid var(--primary); }
-      .code-box { background: var(--primary); color: white; padding: 20px; margin: 15px; border-radius: 15px; text-align: center; z-index: 10; }
-      .code-value { font-size: 45px; font-weight: 900; letter-spacing: 5px; display: block; }
-      #map { flex: 1; width: 100%; z-index: 1; }
+        :root {
+            --igo-orange: #FF4500;
+            --igo-black: #000000;
+            --igo-white: #FFFFFF;
+        }
+
+        body { 
+            margin: 0; padding: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: var(--igo-white); 
+        }
+
+        header {
+            background: var(--igo-black);
+            color: var(--igo-white);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 4px solid var(--igo-orange);
+            font-weight: bold;
+            font-size: 1.4rem;
+            letter-spacing: 1px;
+        }
+
+        #status-container {
+            padding: 15px;
+            background: var(--igo-white);
+            border-bottom: 1px solid #eee;
+            text-align: center;
+        }
+
+        .badge {
+            background: var(--igo-orange);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        #map { height: calc(100vh - 150px); width: 100%; }
+
+        /* Estilo para os ícones no mapa claro */
+        .pino-loja { background: var(--igo-black); border: 2px solid white; border-radius: 50%; }
+        .pino-cliente { background: var(--igo-orange); border: 2px solid white; border-radius: 50%; }
     </style>
-  </head>
-  <body>
-    <div class="header">
-      <div id="store-name" style="font-weight: 900; letter-spacing: 1px">Carregando...</div>
-      <div style="font-size: 11px">Sua entrega em tempo real</div>
+</head>
+<body>
+    <header>iGO iPhones</header>
+    
+    <div id="status-container">
+        Olá, <span id="clientName" style="font-weight:bold;">...</span>! <br>
+        <span style="font-size: 0.9rem; color: #666;">Status:</span> 
+        <span class="badge" id="statusText">Buscando informações...</span>
     </div>
 
     <div id="map"></div>
 
-    <div class="code-box">
-        <span style="font-size: 11px; text-transform: uppercase">Código de Segurança</span>
-        <span id="secret-code" class="code-value">----</span>
-        <span style="font-size: 11px">Diga ao motoboy quando ele chegar.</span>
-    </div>
-
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-      const urlParams = new URLSearchParams(window.location.search);
-      const orderId = urlParams.get("id");
-      const storeSlug = urlParams.get("store") || "igo-iphones";
-      const API_URL = "https://logistica-igo.onrender.com";
+        const socket = io();
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('id');
 
-      const socket = io(API_URL);
-      const map = L.map("map", { zoomControl: false }).setView([-8.0592, -34.8996], 13);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+        // MAPA CLARO (Estilo White/Positron)
+        const map = L.map('map', { zoomControl: false }).setView([-8.0578, -34.8829], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO'
+        }).addTo(map);
 
-      // Ajuste de cor por loja
-      if(storeSlug === 'oxeiphone') {
-          document.documentElement.style.setProperty('--primary', '#22c55e');
-          document.getElementById('store-name').innerText = 'Oxe iPhone';
-      } else {
-          document.getElementById('store-name').innerText = 'iGo iPhones';
-      }
+        let driverMarker, storeMarker, clientMarker;
 
-      socket.emit("join_store", storeSlug);
-      
-      // Aqui você adicionaria a lógica de receber a localização do motoboy via socket
+        if (orderId) {
+            socket.emit('joinOrder', orderId);
+
+            socket.on('orderUpdate', (data) => {
+                document.getElementById('clientName').innerText = data.clientName;
+                document.getElementById('statusText').innerText = data.status;
+
+                // Pino da Loja (Preto)
+                if (!storeMarker) {
+                    storeMarker = L.circleMarker([data.storeLat, data.storeLng], {
+                        color: '#000', fillColor: '#000', fillOpacity: 1, radius: 8
+                    }).addTo(map).bindPopup('Loja iGO');
+                }
+
+                // Pino do Cliente (Laranja)
+                if (!clientMarker) {
+                    clientMarker = L.circleMarker([data.destLat, data.destLng], {
+                        color: '#FF4500', fillColor: '#FF4500', fillOpacity: 1, radius: 10
+                    }).addTo(map).bindPopup('Seu Endereço');
+                }
+
+                // Motorista em tempo real
+                if (data.driverCoords) {
+                    const pos = [data.driverCoords.lat, data.driverCoords.lng];
+                    if (driverMarker) {
+                        driverMarker.setLatLng(pos);
+                    } else {
+                        driverMarker = L.marker(pos).addTo(map).bindPopup('Entregador iGO');
+                    }
+                    map.fitBounds([clientMarker.getLatLng(), driverMarker.getLatLng()], { padding: [70, 70] });
+                }
+            });
+        }
     </script>
-  </body>
+</body>
 </html>
