@@ -2,114 +2,136 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>iGO iPhones - Acompanhe seu pedido</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rastreio | iGO iPhones</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
     <style>
-        :root {
-            --igo-orange: #FF4500;
-            --igo-black: #000000;
-            --igo-white: #FFFFFF;
-        }
-
-        body { 
-            margin: 0; padding: 0; 
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-            background: var(--igo-white); 
-        }
-
-        header {
-            background: var(--igo-black);
-            color: var(--igo-white);
-            padding: 20px;
-            text-align: center;
-            border-bottom: 4px solid var(--igo-orange);
-            font-weight: bold;
-            font-size: 1.4rem;
-            letter-spacing: 1px;
-        }
-
-        #status-container {
-            padding: 15px;
-            background: var(--igo-white);
-            border-bottom: 1px solid #eee;
-            text-align: center;
-        }
-
-        .badge {
-            background: var(--igo-orange);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-
-        #map { height: calc(100vh - 150px); width: 100%; }
-
-        /* Estilo para os ícones no mapa claro */
-        .pino-loja { background: var(--igo-black); border: 2px solid white; border-radius: 50%; }
-        .pino-cliente { background: var(--igo-orange); border: 2px solid white; border-radius: 50%; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
+        body { background: #fdfdfd; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+        .search-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 350px; background: white; padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); z-index: 500; text-align: center; }
+        .tracking-panel { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 30px 30px 0 0; padding: 30px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); z-index: 500; transform: translateY(110%); transition: 0.5s; }
+        .tracking-panel.active { transform: translateY(0); }
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
+        .st-pending { background: #FFF4EC; color: #FF4500; }
+        .st-route { background: #E6FFFA; color: #10B981; }
     </style>
 </head>
 <body>
-    <header>iGO iPhones</header>
-    
-    <div id="status-container">
-        Olá, <span id="clientName" style="font-weight:bold;">...</span>! <br>
-        <span style="font-size: 0.9rem; color: #666;">Status:</span> 
-        <span class="badge" id="statusText">Buscando informações...</span>
+
+    <div id="search-screen" class="search-box">
+        <h1 class="text-2xl font-black mb-2">Rastreio iGO</h1>
+        <p class="text-gray-400 text-sm mb-6">Digite seu ID ou Telefone para acompanhar.</p>
+        <input id="track-input" type="text" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl mb-4 text-center font-bold outline-none focus:border-[#FF4500]" placeholder="ID ou Telefone">
+        <button onclick="buscarManual()" class="w-full bg-black text-white p-4 rounded-xl font-black shadow-lg">RASTREAR</button>
     </div>
 
     <div id="map"></div>
 
+    <div id="info-panel" class="tracking-panel">
+        <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
+        <div id="status-badge" class="status-badge st-pending">AGUARDANDO</div>
+        <h2 id="client-name" class="text-2xl font-black leading-tight mb-1">Carregando...</h2>
+        <p id="driver-info" class="text-gray-500 font-medium mb-6">Procurando entregador...</p>
+        
+        <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-xl">
+            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-xl">🏍️</div>
+            <div>
+                <p class="text-xs text-gray-400 font-bold uppercase">Previsão</p>
+                <p class="font-bold text-gray-800">Chegada em breve</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const socket = io();
+        const API_URL = "https://logistica-igo.onrender.com";
+        const STORE_SLUG = "igo-iphones";
+        const socket = io(API_URL);
+        
+        let map, routeLayer, driverMarker;
+        const lightTile = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
         const urlParams = new URLSearchParams(window.location.search);
-        const orderId = urlParams.get('id');
+        let currentId = urlParams.get('id');
 
-        // MAPA CLARO (Estilo White/Positron)
-        const map = L.map('map', { zoomControl: false }).setView([-8.0578, -34.8829], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; CARTO'
-        }).addTo(map);
+        // INICIA MAPA
+        map = L.map('map', { zoomControl: false }).setView([-8.0592, -34.8996], 13);
+        L.tileLayer(lightTile).addTo(map);
+        routeLayer = L.layerGroup().addTo(map);
 
-        let driverMarker, storeMarker, clientMarker;
+        if(currentId) {
+            document.getElementById('search-screen').style.display = 'none';
+            iniciarRastreio(currentId);
+        }
 
-        if (orderId) {
-            socket.emit('joinOrder', orderId);
+        function buscarManual() {
+            const val = document.getElementById('track-input').value;
+            if(!val) return alert("Digite algo!");
+            // Tenta achar pelo valor digitado (ID ou Telefone)
+            iniciarRastreio(val);
+        }
 
-            socket.on('orderUpdate', (data) => {
-                document.getElementById('clientName').innerText = data.clientName;
-                document.getElementById('statusText').innerText = data.status;
+        async function iniciarRastreio(term) {
+            try {
+                // Busca dados gerais (Como não podemos mudar o server.js, filtramos aqui)
+                const res = await fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`);
+                const data = await res.json();
+                
+                // Procura nos pendentes ou ativos
+                let order = data.activeOrders.find(o => o.id === term || o.phone.includes(term)) || 
+                            data.pendingOrders.find(o => o.id === term || o.phone.includes(term));
 
-                // Pino da Loja (Preto)
-                if (!storeMarker) {
-                    storeMarker = L.circleMarker([data.storeLat, data.storeLng], {
-                        color: '#000', fillColor: '#000', fillOpacity: 1, radius: 8
-                    }).addTo(map).bindPopup('Loja iGO');
+                if(order) {
+                    currentId = order.id; // Fixa o ID correto
+                    document.getElementById('search-screen').style.display = 'none';
+                    atualizarTela(order);
+                    
+                    // Conecta no socket para atualizações em tempo real
+                    socket.emit("join_store", STORE_SLUG);
+                    socket.on("update_map", (d) => {
+                        if(order.driver_phone && d.phone === order.driver_phone) {
+                            atualizarPosicaoMoto(d.lat, d.lng);
+                        }
+                    });
+                    socket.on("refresh_admin", () => iniciarRastreio(currentId)); // Recarrega se houver mudanças
+                } else {
+                    alert("Pedido não encontrado ou já concluído!");
                 }
+            } catch(e) { console.log(e); alert("Erro de conexão."); }
+        }
 
-                // Pino do Cliente (Laranja)
-                if (!clientMarker) {
-                    clientMarker = L.circleMarker([data.destLat, data.destLng], {
-                        color: '#FF4500', fillColor: '#FF4500', fillOpacity: 1, radius: 10
-                    }).addTo(map).bindPopup('Seu Endereço');
-                }
+        function atualizarTela(o) {
+            const panel = document.getElementById('info-panel');
+            panel.classList.add('active');
+            
+            document.getElementById('client-name').innerText = o.client_name;
+            
+            const badge = document.getElementById('status-badge');
+            const driverTxt = document.getElementById('driver-info');
 
-                // Motorista em tempo real
-                if (data.driverCoords) {
-                    const pos = [data.driverCoords.lat, data.driverCoords.lng];
-                    if (driverMarker) {
-                        driverMarker.setLatLng(pos);
-                    } else {
-                        driverMarker = L.marker(pos).addTo(map).bindPopup('Entregador iGO');
-                    }
-                    map.fitBounds([clientMarker.getLatLng(), driverMarker.getLatLng()], { padding: [70, 70] });
-                }
-            });
+            // Limpa mapa
+            routeLayer.clearLayers();
+            // Marca Destino
+            L.marker([o.lat, o.lng], {icon: L.divIcon({html:'<div style="background:#FF4500;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3)"></div>'})}).addTo(routeLayer);
+            map.setView([o.lat, o.lng], 15);
+
+            if(o.status === 'on_route') {
+                badge.innerText = "EM ROTA";
+                badge.className = "status-badge st-route";
+                driverTxt.innerText = `Motoboy: ${o.driver_name}`;
+            } else {
+                badge.innerText = "AGUARDANDO";
+                badge.className = "status-badge st-pending";
+                driverTxt.innerText = "Preparando para envio...";
+            }
+        }
+
+        function atualizarPosicaoMoto(lat, lng) {
+            if(driverMarker) driverMarker.setLatLng([lat, lng]);
+            else driverMarker = L.marker([lat, lng], {icon: L.divIcon({html:'<div style="font-size:24px;">🏍️</div>'})}).addTo(map);
         }
     </script>
 </body>
