@@ -6,7 +6,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* PALETA iGO: PRETO, LARANJA (#FF4500) E BRANCO */
         :root { 
             --primary: #FF4500; 
             --danger: #ef4444; 
@@ -20,9 +19,18 @@
         .sidebar { width: 250px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; z-index: 10; }
         .logo-box { padding: 30px 20px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #222; }
         
-        /* Box da Logo com a imagem que você enviou */
-        .igo-logo { width: 80px; height: 80px; border: 2px solid var(--primary); border-radius: 12px; overflow: hidden; background: white; display: flex; align-items: center; justify-content: center; }
-        .igo-logo img { width: 100%; height: 100%; object-contain: cover; }
+        /* Box da Logo iGO com Truque de Transparência */
+        .igo-logo { 
+            width: 90px; height: 90px; 
+            display: flex; align-items: center; justify-content: center; 
+            background: transparent; /* Fundo transparente aqui */
+        }
+        .igo-logo img { 
+            width: 100%; height: 100%; 
+            object-fit: contain;
+            /* Truque de IA: Remove o fundo preto do JPG visualmente */
+            mix-blend-mode: screen; 
+        }
 
         .nav-item { padding: 15px 25px; cursor: pointer; display: flex; align-items: center; color: #aaa; transition: 0.2s; font-weight: 600; }
         .nav-item i { margin-right: 12px; }
@@ -36,11 +44,11 @@
         .card h3 { margin: 0; font-size: 14px; color: #64748b; text-transform: uppercase; }
         .card .value { font-size: 28px; font-weight: 800; color: #000; }
 
-        .order-card { background: white; border: 1px solid #eee; border-left: 5px solid var(--primary); border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .order-card { background: white; border: 1px solid #eee; border-left: 5px solid var(--primary); border-radius: 10px; padding: 15px; margin-bottom: 10px; }
         .dispatch-controls { display: flex; gap: 10px; margin-top: 10px; }
         .btn-dispatch { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-        .chat-frame { background: white; border: 1px solid #eee; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; height: 450px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .chat-frame { background: white; border: 1px solid #eee; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; height: 450px; }
         .chat-body { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; }
         .msg { padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; max-width: 85%; font-size: 14px; }
         .msg.admin { background: var(--primary); color: white; align-self: flex-end; }
@@ -50,22 +58,21 @@
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #64748b; }
         .input-group input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; background: #fcfcfc; }
-        .btn-save { width: 100%; background: var(--primary); color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-save { width: 100%; background: var(--primary); color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
         .monitor-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; height: 600px; }
         #map { height: 100%; width: 100%; border-radius: 15px; border: 1px solid #eee; }
         .btn-link { background: #25D366; color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: bold; }
         
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
-        th { background: #f8fafc; padding: 15px; text-align: left; color: #64748b; font-size: 12px; text-transform: uppercase; }
-        td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
         <div class="logo-box">
-            <div class="igo-logo"><img src="logo.jpg" alt="iGO"></div>
+            <div class="igo-logo"><img src="logo.jpg" alt="iGO iPhones"></div>
             <p style="font-weight: 900; margin-top: 15px; letter-spacing: 1px;">iGo iPhones</p>
         </div>
         <div class="nav-item active" onclick="nav('dashboard')"><i class="fas fa-home"></i> Painel</div>
@@ -76,11 +83,11 @@
     </div>
 
     <div id="dashboard" class="main active">
-        <h2 style="font-weight: 900;">Dashboard</h2>
+        <h2 style="font-weight: 900;">Painel de Controle</h2>
         <div class="cards-container">
-            <div class="card" style="border-left:5px solid var(--success)"><h3>Faturamento Total</h3><div class="value" id="dash-money">R$ 0,00</div></div>
-            <div class="card" style="border-left:5px solid var(--primary)"><h3>Pedidos Pendentes</h3><div class="value" id="dash-pending">0</div></div>
-            <div class="card" style="border-left:5px solid #000"><h3>Entregas em Rota</h3><div class="value" id="dash-active">0</div></div>
+            <div class="card" style="border-left:5px solid var(--success)"><h3>Faturamento</h3><div class="value" id="dash-money">R$ 0,00</div></div>
+            <div class="card" style="border-left:5px solid var(--primary)"><h3>Pendentes</h3><div class="value" id="dash-pending">0</div></div>
+            <div class="card" style="border-left:5px solid #000"><h3>Em Rota</h3><div class="value" id="dash-active">0</div></div>
         </div>
         <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap: 20px;">
             <div><h3>Pedidos Aguardando</h3><div id="pending-list"></div></div>
@@ -88,7 +95,7 @@
                 <div style="padding:15px; font-weight:bold; background:#000; color: #fff;">Chat Central iGO</div>
                 <div id="chat-msgs" class="chat-body"></div>
                 <div style="padding:10px; display:flex; gap:5px; background: #f8fafc; border-top: 1px solid #eee;">
-                    <input type="text" id="chat-txt" placeholder="Enviar mensagem para motoboys..." style="flex:1; padding:10px; border:1px solid #ddd; border-radius:5px; outline: none;">
+                    <input type="text" id="chat-txt" placeholder="Mensagem..." style="flex:1; padding:10px; border:1px solid #ddd; border-radius:5px;">
                     <button onclick="sendMsg()" style="background:var(--primary); color:white; border:none; padding:8px 20px; border-radius:5px; font-weight: bold;">Enviar</button>
                 </div>
             </div>
@@ -99,19 +106,19 @@
         <h2 style="font-weight: 900;">Novo Pedido</h2>
         <div class="form-layout">
             <div>
-                <div class="input-group"><label>Nome do Cliente</label><input type="text" id="np-name" placeholder="Ex: João da Silva"></div>
-                <div class="input-group"><label>Valor da Venda (R$)</label><input type="text" id="np-price" oninput="maskMoney(this)" placeholder="R$ 0,00"></div>
-                <div class="input-group"><label>WhatsApp do Cliente</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16" placeholder="(81) 9 0000-0000"></div>
+                <div class="input-group"><label>Cliente</label><input type="text" id="np-name" placeholder="Nome do cliente"></div>
+                <div class="input-group"><label>Valor da Venda</label><input type="text" id="np-price" oninput="maskMoney(this)" placeholder="R$ 0,00"></div>
+                <div class="input-group"><label>WhatsApp</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16" placeholder="(81) 9 0000-0000"></div>
                 <div class="input-group"><label>Endereço em Recife</label><input type="text" id="np-addr" onblur="buscarEndereco()" placeholder="Rua, Número, Bairro"></div>
                 <input type="hidden" id="np-lat"><input type="hidden" id="np-lng">
-                <button id="btn-create" class="btn-save" onclick="saveOrder()">CRIAR E GERAR RASTREIO</button>
+                <button id="btn-create" class="btn-save" onclick="saveOrder()">CRIAR PEDIDO E RASTREIO</button>
             </div>
-            <div id="map-cadastro" style="height: 450px; border-radius:12px; border:1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.05);"></div>
+            <div id="map-cadastro" style="height: 400px; border-radius:12px; border:1px solid #eee;"></div>
         </div>
     </div>
 
     <div id="monitoramento" class="main">
-        <h2 style="font-weight: 900;">Monitoramento em Tempo Real</h2>
+        <h2 style="font-weight: 900;">Monitoramento</h2>
         <div class="monitor-layout">
             <div id="monitor-list" style="background:white; padding:10px; border-radius:12px; overflow-y:auto; border:1px solid #eee;"></div>
             <div id="map"></div>
@@ -119,7 +126,7 @@
     </div>
 
     <div id="historico" class="main">
-        <h2 style="font-weight: 900;">Histórico de Entregas</h2>
+        <h2 style="font-weight: 900;">Histórico</h2>
         <table>
             <thead><tr><th>Data/Hora</th><th>Cliente</th><th>Valor</th><th>Entregador</th><th>Ação</th></tr></thead>
             <tbody id="history-body"></tbody>
@@ -134,17 +141,16 @@
         const socket = io();
         let globalData = null;
 
-        // CONFIGURAÇÃO DO MAPA CLARO (WHITE MAP)
+        // MAPA CLARO (WHITE MAP)
         const lightTile = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-        const mapAttr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
-
+        
         const map = L.map('map', { zoomControl: false }).setView([-8.0592, -34.8996], 13);
-        L.tileLayer(lightTile, { attribution: mapAttr }).addTo(map);
+        L.tileLayer(lightTile).addTo(map);
         
         let markers = {}, routeLayer = L.layerGroup().addTo(map);
         
         const mapCad = L.map('map-cadastro', { zoomControl: false }).setView([-8.0592, -34.8996], 13);
-        L.tileLayer(lightTile, { attribution: mapAttr }).addTo(mapCad);
+        L.tileLayer(lightTile).addTo(mapCad);
         let cadMarker;
 
         document.getElementById('chat-txt').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMsg(); });
@@ -164,7 +170,7 @@
 
         function enviarLinkCliente(id, phone, name) {
             const link = `${window.location.origin}/?id=${id}`;
-            const msg = `Olá ${name}, a iGo iPhones informa: Seu pedido saiu para entrega! 🏍️\nAcompanhe em tempo real por aqui: ${link}`;
+            const msg = `Olá ${name}, a iGo iPhones informa: Pedido saiu! 🏍️\nAcompanhe aqui: ${link}`;
             window.open(`https://web.whatsapp.com/send?phone=55${phone.replace(/\D/g,'')}&text=${encodeURIComponent(msg)}`, '_blank');
         }
 
@@ -176,7 +182,7 @@
                 const lat = data[0].lat, lng = data[0].lon;
                 document.getElementById('np-lat').value = lat; document.getElementById('np-lng').value = lng;
                 if(cadMarker) mapCad.removeLayer(cadMarker);
-                cadMarker = L.circleMarker([lat, lng], { radius: 8, color: '#FF4500', fillColor: '#FF4500', fillOpacity: 1 }).addTo(mapCad); 
+                cadMarker = L.circleMarker([lat, lng], { radius: 8, color: '#FF4500', fillColor: '#FF4500', fillOpacity: 1 }).addTo(mapCad);
                 mapCad.setView([lat, lng], 16);
             }
         }
@@ -202,54 +208,54 @@
                 <div class="order-card">
                     <b>${o.clientName}</b><br><small>${o.address}</small>
                     <div class="dispatch-controls">
-                        <select id="sel-${o.id}" style="padding: 5px; border-radius: 5px; border: 1px solid #ddd;"><option value="">Selecionar Moto...</option>${globalData.drivers.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select>
-                        <button class="btn-dispatch" onclick="despachar('${o.id}')">Despachar</button>
+                        <select id="sel-${o.id}"><option value="">Moto...</option>${globalData.drivers.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select>
+                        <button class="btn-dispatch" onclick="despachar('${o.id}')">Enviar</button>
                     </div>
                 </div>
             `).join('');
 
             document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
                 <div style="padding:15px; border-bottom:1px solid #eee;">
-                    <b style="color: #000;">${o.clientName}</b><br><small>Entregador: ${o.driverName}</small>
+                    <b>${o.clientName}</b><br><small>Moto: ${o.driverName}</small>
                     <div style="display:flex; gap:5px; margin-top:10px;">
-                        <button onclick="focarRota('${o.id}')" style="flex:1; padding:8px; border-radius:5px; border:1px solid #eee; background:#fff; font-weight: bold; cursor: pointer;">Ver Rota</button>
-                        <button class="btn-link" onclick="enviarLinkCliente('${o.id}', '${o.phone}', '${o.clientName}')">WhatsApp Link</button>
+                        <button onclick="focarRota('${o.id}')" style="flex:1; padding:8px; border-radius:5px; border:1px solid #eee; background:#fff; font-weight: bold;">Rota</button>
+                        <button class="btn-link" onclick="enviarLinkCliente('${o.id}', '${o.phone}', '${o.clientName}')">WhatsApp</button>
                     </div>
                 </div>
             `).join('');
 
             document.getElementById('history-body').innerHTML = globalData.history.map(h => `
-                <tr><td>${h.completedAt}</td><td>${h.clientName}</td><td>R$ ${(h.price||0).toFixed(2)}</td><td>${h.driverName}</td><td><button onclick="delHist('${h.id}')" style="color:red; border:none; background:none; cursor: pointer; font-size: 18px;">🗑️</button></td></tr>
+                <tr><td>${h.completedAt}</td><td>${h.clientName}</td><td>R$ ${(h.price||0).toFixed(2)}</td><td>${h.driverName}</td><td><button onclick="delHist('${h.id}')" style="color:red; border:none; background:none; cursor: pointer;">🗑️</button></td></tr>
             `).join('');
         }
 
         async function saveOrder() {
-            const btn = document.getElementById('btn-create'); btn.innerText = "Salvando..."; btn.disabled = true;
+            const btn = document.getElementById('btn-create'); btn.innerText = "⏳..."; btn.disabled = true;
             const price = parseFloat(document.getElementById('np-price').value.replace('R$','').replace('.','').replace(',','.').trim());
             await fetch('/register-delivery', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ clientName: document.getElementById('np-name').value, price, phone: document.getElementById('np-phone').value, address: document.getElementById('np-addr').value, lat: document.getElementById('np-lat').value, lng: document.getElementById('np-lng').value }) });
-            alert("Pedido iGO Criado com Sucesso!"); 
+            alert("Pedido iGO Criado!"); 
             document.querySelectorAll('#novo-pedido input').forEach(i => i.value = ''); 
-            btn.innerText = "CRIAR E GERAR RASTREIO"; btn.disabled = false; 
+            btn.innerText = "CRIAR PEDIDO E RASTREIO"; btn.disabled = false; 
             nav('dashboard'); refreshData();
         }
 
         async function despachar(id) { const d = document.getElementById('sel-'+id).value; if(!d) return; await fetch('/assign-order', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({orderId: id, driverSocketId: d}) }); refreshData(); }
         
-        // SENHA ATUALIZADA PARA 2026
-        async function delHist(id) { if(prompt("Senha Administrativa:")==="Abraao2026123") await fetch('/delete-history/'+id, {method:'DELETE'}); refreshData(); }
-        async function fullReset() { if(prompt("Senha Master (Zerar Tudo):")==="Abraao2026123") { await fetch('/api/reset-system', {method:'POST'}); location.reload(); } }
+        // SENHA ATUALIZADA
+        async function delHist(id) { if(prompt("Senha Master:")==="Abraao2026123") await fetch('/delete-history/'+id, {method:'DELETE'}); refreshData(); }
+        async function fullReset() { if(prompt("Senha Master (Zerar):")==="Abraao2026123") { await fetch('/api/reset-system', {method:'POST'}); location.reload(); } }
 
         function focarRota(id) {
             routeLayer.clearLayers(); const o = globalData.activeOrders.find(x => x.id === id);
             if(o) {
                 L.marker([o.storeCoords.lat, o.storeCoords.lng], {icon: L.divIcon({html:'<div style="background:#000;width:12px;height:12px;border-radius:50%;border:2px solid white"></div>', className:''})}).addTo(routeLayer);
-                L.marker([o.destCoords.lat, o.destCoords.lng], {icon: L.divIcon({html:'<div style="background:#FF4500;width:14px;height:14px;border-radius:50%;border:2px solid white"></div>', className:''})}).addTo(routeLayer);
+                L.marker([o.destCoords.lat, o.destCoords.lng], {icon: L.divIcon({html:'<div style="background:#FF4500;width:12px;height:12px;border-radius:50%;border:2px solid white"></div>', className:''})}).addTo(routeLayer);
                 map.setView([o.destCoords.lat, o.destCoords.lng], 14);
             }
         }
 
         socket.on('update_map', (data) => {
-            if(!markers[data.socketId]) markers[data.socketId] = L.marker([data.lat, data.lng], {icon: L.divIcon({html:'<div style="font-size:25px">🏍️</div>', className:'', iconSize:[30,30]})}).addTo(map);
+            if(!markers[data.socketId]) markers[data.socketId] = L.marker([data.lat, data.lng], {icon: L.divIcon({html:'<div style="font-size:20px">🏍️</div>', className:'', iconSize:[30,30]})}).addTo(map);
             else markers[data.socketId].setLatLng([data.lat, data.lng]);
         });
         
