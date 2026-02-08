@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entregador | Logística</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white font-sans">
+    <header class="p-4 bg-slate-800 border-b border-slate-700 text-center font-bold text-lg">
+        Painel do Entregador - <span id="store-display">...</span>
+    </header>
+
+    <div id="login-screen" class="p-6">
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+            <h2 class="mb-4 text-center">Digite seu nome para começar:</h2>
+            <input type="text" id="driver-name" class="w-full p-4 bg-slate-900 border border-slate-700 rounded-lg mb-4 text-center" placeholder="Ex: João Motoboy">
+            <button onclick="startSession()" class="w-full bg-blue-600 p-4 rounded-lg font-bold uppercase">Entrar no Sistema</button>
+        </div>
+    </div>
+
+    <main id="orders-screen" class="hidden p-4 space-y-4">
+        <h3 class="text-slate-400 uppercase text-xs font-bold">Entregas Aguardando:</h3>
+        <div id="pending-list" class="space-y-3"></div>
+    </main>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const API_URL = "https://logistica-igo.onrender.com";
+        const urlParams = new URLSearchParams(window.location.search);
+        const STORE_SLUG = urlParams.get('store') || 'igo-iphones';
+        const socket = io(API_URL);
+        
+        document.getElementById('store-display').innerText = STORE_SLUG;
+
+        function startSession() {
+            const name = document.getElementById('driver-name').value;
+            if(!name) return alert("Digite seu nome!");
+            localStorage.setItem('driver_name', name);
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('orders-screen').classList.remove('hidden');
+            socket.emit("join_store", STORE_SLUG);
+            refreshOrders();
+        }
+
+        async function refreshOrders() {
+            const res = await fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`);
+            const data = await res.json();
+            
+            document.getElementById('pending-list').innerHTML = data.pendingOrders.map(o => `
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                    <div class="font-bold text-lg">${o.client_name}</div>
+                    <div class="text-slate-400 text-sm mb-3">${o.address}</div>
+                    <button onclick="acceptOrder('${o.id}')" class="w-full bg-green-600 p-3 rounded-lg font-bold">Aceitar Entrega</button>
+                </div>
+            `).join('');
+        }
+
+        async function acceptOrder(id) {
+            const name = localStorage.getItem('driver_name');
+            await fetch(`${API_URL}/assign-order`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: id, driverName: name, store_slug: STORE_SLUG })
+            });
+            alert("Entrega aceita! Agora você aparecerá no painel administrativo.");
+            refreshOrders();
+        }
+
+        socket.on("refresh_admin", refreshOrders);
+    </script>
+</body>
+</html>
