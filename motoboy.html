@@ -19,11 +19,9 @@
         .go-btn.online { background: #111; border-color: #FF4500; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
         .pulse { animation: pulse-animation 2s infinite; }
         @keyframes pulse-animation { 0% { box-shadow: 0 0 0 0 rgba(255, 69, 0, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 69, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 69, 0, 0); } }
-        
         .bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 30px 30px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.15); z-index: 60; transform: translateY(110%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding: 10px 20px 100px 20px; }
         .bottom-sheet.active { transform: translateY(0); }
         .drag-handle { width: 40px; height: 5px; background: #e5e7eb; border-radius: 10px; margin: 5px auto 15px auto; cursor: grab; }
-        
         .action-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 20px 0; }
         .action-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; border-radius: 16px; font-weight: 700; font-size: 12px; transition: 0.2s; }
         .btn-waze { background: #FEF4E8; color: #33CCFF; }
@@ -34,8 +32,6 @@
         .status-badge { font-size: 12px; font-weight: 900; letter-spacing: 2px; padding: 5px 15px; border-radius: 20px; }
         .st-off { background: #f3f4f6; color: #9ca3af; }
         .st-on { background: #FFF4EC; color: #FF4500; border: 1px solid #FF4500; }
-
-        /* MODAL DE ASSINATURA */
         #sig-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; display: none; align-items: center; justify-content: center; }
         .sig-box { background: white; padding: 20px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; }
         canvas { border: 2px dashed #ccc; border-radius: 10px; background: #fff; touch-action: none; width: 100%; height: 200px; }
@@ -55,19 +51,12 @@
     <div class="status-header"><div id="status-badge" class="status-badge st-off">OFFLINE</div></div>
     <div id="map"></div>
     <div class="go-btn-container"><div id="btn-main" class="go-btn" onclick="toggle()">GO</div></div>
-    
-    <div class="bottom-sheet" id="order-panel">
-        <div class="drag-handle" onclick="togglePanel()"></div>
-        <div id="order-content"></div>
-    </div>
-
+    <div class="bottom-sheet" id="order-panel"><div class="drag-handle" onclick="togglePanel()"></div><div id="order-content"></div></div>
     <div id="sig-modal">
         <div class="sig-box">
             <h2 class="text-xl font-bold mb-4">Finalizar Entrega</h2>
             <p class="text-gray-500 text-sm mb-2">Peça o código ao cliente:</p>
-            <div class="flex justify-center gap-2 mb-4">
-                <input id="code-1" type="tel" maxlength="4" class="w-32 p-3 text-center text-2xl font-black border-2 border-black rounded-xl tracking-widest" placeholder="0000">
-            </div>
+            <div class="flex justify-center gap-2 mb-4"><input id="code-1" type="tel" maxlength="4" class="w-32 p-3 text-center text-2xl font-black border-2 border-black rounded-xl tracking-widest" placeholder="0000"></div>
             <p class="text-gray-500 text-sm mb-2">Assinatura do Cliente:</p>
             <canvas id="sig-canvas"></canvas>
             <button onclick="clearSig()" class="text-xs text-red-500 font-bold mb-4 mt-1">Limpar Assinatura</button>
@@ -84,14 +73,9 @@
         const socket = io(API);
         let map, marker, destMarker, isOnline = false, watchId, currentOrderId;
         const osmTile = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-        
         const cvs = document.getElementById('logoCanvas'), ctx = cvs.getContext('2d'), img = new Image(); img.src = 'logo.png';
         img.onload = () => { cvs.width=img.width; cvs.height=img.height; ctx.drawImage(img,0,0); const d=ctx.getImageData(0,0,cvs.width,cvs.height); for(let i=0;i<d.data.length;i+=4) if(d.data[i]<45) d.data[i+3]=0; ctx.putImageData(d,0,0); };
-
-        // Configuração Assinatura
-        const canvasSig = document.getElementById('sig-canvas');
-        const ctxSig = canvasSig.getContext('2d');
-        let painting = false;
+        const canvasSig = document.getElementById('sig-canvas'); const ctxSig = canvasSig.getContext('2d'); let painting = false;
 
         function init() {
             if(localStorage.getItem('d_phone')) document.getElementById('login-screen').style.display='none';
@@ -99,10 +83,7 @@
             L.tileLayer(osmTile).addTo(map);
             registrarNoServidor(); 
             socket.on("refresh_driver", buscarRota);
-            
-            // Ajusta canvas
-            canvasSig.width = canvasSig.offsetWidth;
-            canvasSig.height = canvasSig.offsetHeight;
+            canvasSig.width = canvasSig.offsetWidth; canvasSig.height = canvasSig.offsetHeight;
         }
 
         function registrarNoServidor() { if(localStorage.getItem('d_phone')) socket.emit("driver_join", { store_slug: STORE, name: localStorage.getItem('d_name'), phone: localStorage.getItem('d_phone') }); }
@@ -117,12 +98,7 @@
         }
 
         let isExpanded = false;
-        function togglePanel() {
-            const p = document.getElementById('order-panel');
-            isExpanded = !isExpanded;
-            if(isExpanded) p.style.transform = "translateY(0)"; 
-            else p.style.transform = "translateY(0)"; 
-        }
+        function togglePanel() { const p = document.getElementById('order-panel'); isExpanded = !isExpanded; if(isExpanded) p.style.transform = "translateY(0)"; else p.style.transform = "translateY(0)"; }
 
         function toggle() {
             isOnline=!isOnline;
@@ -153,99 +129,35 @@
                 const data = await res.json();
                 const me = localStorage.getItem('d_phone');
                 const order = data.activeOrders.find(o => o.driver_phone === me);
-                
-                const painel = document.getElementById('order-panel');
-                const content = document.getElementById('order-content');
-
+                const painel = document.getElementById('order-panel'), content = document.getElementById('order-content');
                 if(order) {
                     painel.classList.add('active');
                     if(destMarker) map.removeLayer(destMarker);
-                    destMarker = L.marker([order.lat, order.lng], {
-                         icon: L.divIcon({html: '<div style="background:#000; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.3)"><i class="fas fa-flag-checkered"></i></div>', className: ''})
-                    }).addTo(map);
-
-                    content.innerHTML = `
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h2 class="text-2xl font-black leading-none mb-1">${order.client_name}</h2>
-                                <p class="text-sm text-gray-400 font-bold">ID #${order.id.slice(-4)}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-gray-50 p-4 rounded-xl mt-4 border border-gray-100">
-                            <p class="text-sm text-gray-600 font-medium"><i class="fas fa-map-marker-alt text-[#FF4500] mr-2"></i>${order.address}</p>
-                        </div>
-
-                        <div class="action-grid">
-                            <a href="https://wa.me/55${order.phone.replace(/\D/g,'')}" target="_blank" class="action-btn btn-zap"><i class="fab fa-whatsapp text-2xl mb-1"></i> Zap</a>
-                            <a href="https://waze.com/ul?ll=${order.lat},${order.lng}&navigate=yes" target="_blank" class="action-btn btn-waze"><i class="fab fa-waze text-2xl mb-1"></i> Waze</a>
-                            <a href="https://www.google.com/maps/dir/?api=1&destination=${order.lat},${order.lng}" target="_blank" class="action-btn btn-maps"><i class="fas fa-map-marked-alt text-2xl mb-1"></i> Maps</a>
-                        </div>
-
-                        <button onclick="fim('${order.id}')" class="w-full bg-black text-white p-5 rounded-2xl font-black text-lg shadow-lg active:scale-95 transition mt-2">
-                            FINALIZAR ENTREGA <i class="fas fa-check-circle ml-2"></i>
-                        </button>
-                    `;
-                } else {
-                    painel.classList.remove('active');
-                    if(destMarker) map.removeLayer(destMarker);
-                }
+                    destMarker = L.marker([order.lat, order.lng], { icon: L.divIcon({html: '<div style="background:#000; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.3)"><i class="fas fa-flag-checkered"></i></div>', className: ''}) }).addTo(map);
+                    content.innerHTML = `<div class="flex justify-between items-start"><div><h2 class="text-2xl font-black leading-none mb-1">${order.client_name}</h2><p class="text-sm text-gray-400 font-bold">ID #${order.id.slice(-4)}</p></div></div><div class="bg-gray-50 p-4 rounded-xl mt-4 border border-gray-100"><p class="text-sm text-gray-600 font-medium"><i class="fas fa-map-marker-alt text-[#FF4500] mr-2"></i>${order.address}</p></div><div class="action-grid"><a href="https://wa.me/55${order.phone.replace(/\D/g,'')}" target="_blank" class="action-btn btn-zap"><i class="fab fa-whatsapp text-2xl mb-1"></i> Zap</a><a href="https://waze.com/ul?ll=${order.lat},${order.lng}&navigate=yes" target="_blank" class="action-btn btn-waze"><i class="fab fa-waze text-2xl mb-1"></i> Waze</a><a href="https://www.google.com/maps/dir/?api=1&destination=${order.lat},${order.lng}" target="_blank" class="action-btn btn-maps"><i class="fas fa-map-marked-alt text-2xl mb-1"></i> Maps</a></div><button onclick="fim('${order.id}')" class="w-full bg-black text-white p-5 rounded-2xl font-black text-lg shadow-lg active:scale-95 transition mt-2">FINALIZAR ENTREGA <i class="fas fa-check-circle ml-2"></i></button>`;
+                } else { painel.classList.remove('active'); if(destMarker) map.removeLayer(destMarker); }
             } catch(e) { console.log("Erro rota", e); }
         }
 
-        // --- LÓGICA DE ASSINATURA ---
-        function fim(id) {
-            currentOrderId = id;
-            document.getElementById('sig-modal').style.display = 'flex';
-        }
-
+        function fim(id) { currentOrderId = id; document.getElementById('sig-modal').style.display = 'flex'; }
         function closeSig() { document.getElementById('sig-modal').style.display = 'none'; }
         function clearSig() { ctxSig.clearRect(0, 0, canvasSig.width, canvasSig.height); }
-
         function startPosition(e) { painting = true; draw(e); }
         function finishedPosition() { painting = false; ctxSig.beginPath(); }
-        function draw(e) {
-            if(!painting) return;
-            e.preventDefault();
-            const rect = canvasSig.getBoundingClientRect();
-            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-            ctxSig.lineWidth = 3; ctxSig.lineCap = 'round'; ctxSig.lineTo(x, y); ctxSig.stroke(); ctxSig.beginPath(); ctxSig.moveTo(x, y);
-        }
-
-        canvasSig.addEventListener('touchstart', startPosition);
-        canvasSig.addEventListener('touchend', finishedPosition);
-        canvasSig.addEventListener('touchmove', draw);
-        canvasSig.addEventListener('mousedown', startPosition);
-        canvasSig.addEventListener('mouseup', finishedPosition);
-        canvasSig.addEventListener('mousemove', draw);
+        function draw(e) { if(!painting) return; e.preventDefault(); const rect = canvasSig.getBoundingClientRect(); const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left; const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top; ctxSig.lineWidth = 3; ctxSig.lineCap = 'round'; ctxSig.lineTo(x, y); ctxSig.stroke(); ctxSig.beginPath(); ctxSig.moveTo(x, y); }
+        canvasSig.addEventListener('touchstart', startPosition); canvasSig.addEventListener('touchend', finishedPosition); canvasSig.addEventListener('touchmove', draw); canvasSig.addEventListener('mousedown', startPosition); canvasSig.addEventListener('mouseup', finishedPosition); canvasSig.addEventListener('mousemove', draw);
 
         async function confirmarEntrega() {
             const code = document.getElementById('code-1').value;
             if(code.length < 4) return alert("Digite o código de 4 dígitos!");
-            
-            const res = await fetch(`${API}/verify-code`, {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ orderId: currentOrderId, code: code })
-            });
+            const res = await fetch(`${API}/verify-code`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ orderId: currentOrderId, code: code }) });
             const data = await res.json();
-            
             if(data.valid) {
                 const signature = canvasSig.toDataURL();
-                await fetch(`${API}/complete-delivery`, { 
-                    method:'POST', headers:{'Content-Type':'application/json'}, 
-                    body:JSON.stringify({store_slug:STORE, orderId: currentOrderId, signature: signature}) 
-                });
-                closeSig();
-                alert("Entrega Realizada com Sucesso! 💰");
-                document.getElementById('code-1').value = '';
-                clearSig();
-                buscarRota();
-            } else {
-                alert("❌ CÓDIGO INCORRETO!");
-            }
+                await fetch(`${API}/complete-delivery`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_slug:STORE, orderId: currentOrderId, signature: signature}) });
+                closeSig(); alert("Entrega Realizada! 💰"); document.getElementById('code-1').value = ''; clearSig(); buscarRota();
+            } else { alert("❌ CÓDIGO INCORRETO!"); }
         }
-
         window.onload = init;
     </script>
 </body>
