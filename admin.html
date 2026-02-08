@@ -15,7 +15,6 @@
         .sidebar { width: 260px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 20px rgba(0,0,0,0.1); }
         .logo-box { padding: 40px 20px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #222; margin-bottom: 20px; }
         
-        /* LOGO TRANSPARENTE */
         #logo-container { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; background: transparent; border-radius: 20px; padding: 10px; border: 1px solid #333; }
         canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 
@@ -90,7 +89,11 @@
         <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap: 30px;">
             <div>
                 <h3 style="margin-bottom:20px; color:#6B7280; font-size:14px; text-transform:uppercase; font-weight:700;">Aguardando Motoboy</h3>
-                <div id="pending-list"></div>
+                
+                <div id="pending-list" style="min-height: 200px;">
+                    <p style="color:#aaa; text-align:center; padding:20px;">Carregando pedidos...</p>
+                </div>
+                
             </div>
             <div class="chat-frame" style="background:white; border-radius:16px; padding:20px; box-shadow:0 4px 6px rgba(0,0,0,0.05);">
                 <h3 style="margin-top:0; color:#111;">Chat Central</h3>
@@ -161,7 +164,13 @@
             if (!mapCad) { mapCad = L.map('map-cadastro', { zoomControl: false }).setView([-8.0592, -34.8996], 13); L.tileLayer(osmTile).addTo(mapCad); }
         }
 
-        window.onload = () => { initMaps(); socket.emit("join_store", STORE_SLUG); refreshData(); };
+        window.onload = () => { 
+            initMaps(); 
+            socket.emit("join_store", STORE_SLUG); 
+            refreshData(); 
+            // ATUALIZAÇÃO AUTOMÁTICA A CADA 5s
+            setInterval(refreshData, 5000);
+        };
         
         function nav(id) { 
             document.querySelectorAll('.main').forEach(d => d.classList.remove('active')); 
@@ -181,23 +190,28 @@
 
                 const driversOptions = (globalData.drivers || []).map(d => `<option value="${d.name}|${d.phone}">${d.name} (Online)</option>`).join('');
                 
-                // --- LISTA DE PENDENTES (COM BOTÃO DE EXCLUIR) ---
-                document.getElementById('pending-list').innerHTML = (globalData.pendingOrders || []).map(o => `
-                    <div class="order-card">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                            <span style="font-weight:800; font-size:16px;">${o.client_name}</span>
-                            <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none; cursor:pointer; font-size:14px;"><i class="fas fa-trash"></i></button>
+                // --- LISTA DE PENDENTES (Renderização Forçada) ---
+                const pendingList = document.getElementById('pending-list');
+                if (globalData.pendingOrders.length === 0) {
+                    pendingList.innerHTML = '<p style="color:#aaa; text-align:center; padding:20px;">Nenhum pedido pendente.</p>';
+                } else {
+                    pendingList.innerHTML = globalData.pendingOrders.map(o => `
+                        <div class="order-card">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                                <span style="font-weight:800; font-size:16px;">${o.client_name}</span>
+                                <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none; cursor:pointer; font-size:14px;"><i class="fas fa-trash"></i></button>
+                            </div>
+                            <div style="color:#6B7280; font-size:13px; margin-bottom:15px;"><i class="fas fa-map-marker-alt" style="color:var(--primary)"></i> ${o.address}</div>
+                            <div style="display:flex; gap:10px;">
+                                <select id="sel-${o.id}"><option value="">Selecione o Motoboy...</option>${driversOptions}</select>
+                                <button class="btn-dispatch" onclick="despachar('${o.id}')"><i class="fas fa-paper-plane"></i></button>
+                            </div>
                         </div>
-                        <div style="color:#6B7280; font-size:13px; margin-bottom:15px;"><i class="fas fa-map-marker-alt" style="color:var(--primary)"></i> ${o.address}</div>
-                        <div style="display:flex; gap:10px;">
-                            <select id="sel-${o.id}"><option value="">Selecione o Motoboy...</option>${driversOptions}</select>
-                            <button class="btn-dispatch" onclick="despachar('${o.id}')"><i class="fas fa-paper-plane"></i></button>
-                        </div>
-                    </div>
-                `).join('') || '<p style="color:#aaa; text-align:center; padding:20px;">Nenhum pedido pendente.</p>';
+                    `).join('');
+                }
 
-                // --- LISTA DE MONITORAMENTO (COM BOTÃO DE EXCLUIR) ---
-                document.getElementById('monitor-list').innerHTML = (globalData.activeOrders || []).map(o => `
+                // --- LISTA DE MONITORAMENTO ---
+                document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
                     <div style="padding:20px; border-bottom:1px solid #eee; background:#F9FAFB; border-radius:12px; margin-bottom:10px;">
                         <div style="display:flex; justify-content:space-between;">
                             <div><b>${o.client_name}</b> <span style="color:var(--success); font-weight:bold;">Em Rota</span></div>
@@ -214,15 +228,14 @@
                 
                 document.getElementById('history-body').innerHTML = globalData.history.map(h => `<tr><td>${new Date(h.completed_at).toLocaleDateString()}</td><td>${h.client_name}</td><td>R$ ${parseFloat(h.price).toFixed(2)}</td><td>${h.driver_name}</td><td><button onclick="delHist('${h.id}')" style="color:var(--danger); background:none; border:none; cursor:pointer; font-size:16px;"><i class="fas fa-trash-alt"></i></button></td></tr>`).join('');
 
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Erro ao buscar dados:", e); }
         }
 
-        // --- FUNÇÃO PARA EXCLUIR PEDIDO ---
         async function cancelarPedido(id) {
-            if(!confirm("Tem certeza que deseja EXCLUIR este pedido permanentemente?")) return;
+            if(!confirm("Tem certeza que deseja EXCLUIR este pedido?")) return;
             try {
                 await fetch(`${API_URL}/delete-order/${id}`, { method: 'DELETE' });
-                setTimeout(refreshData, 500); // Aguarda e atualiza
+                refreshData();
             } catch(e) { alert("Erro ao excluir."); }
         }
 
@@ -232,7 +245,7 @@
             const lng = document.getElementById('np-lng').value;
             
             if(lat == 0 || lng == 0 || !lat || !lng) {
-                alert("⚠️ ATENÇÃO: Endereço não localizado!\n\nPor favor, digite o endereço completo (Rua, Cidade, Estado) e clique fora para buscar no mapa.");
+                alert("⚠️ ATENÇÃO: Endereço não localizado!\n\nPor favor, digite o endereço completo e clique fora para buscar.");
                 return;
             }
 
@@ -243,10 +256,9 @@
                 document.querySelectorAll('#novo-pedido input').forEach(i => i.value = ''); 
                 document.getElementById('np-lat').value = "0"; 
                 
-                // MÁGICA PARA APARECER NA TELA:
                 nav('dashboard'); 
                 refreshData();
-                setTimeout(refreshData, 500); // Garante 2x
+                setTimeout(refreshData, 1000); 
 
             } catch (e) { alert("Erro de conexão."); }
             btn.innerText = "CRIAR PEDIDO E RASTREIO"; btn.disabled = false;
@@ -273,7 +285,7 @@
 
         async function buscarEndereco() {
             const addr = document.getElementById('np-addr').value; if(addr.length<5) return;
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ', Brazil')}`);
             const data = await res.json(); 
             if(data.length){ 
                 document.getElementById('np-lat').value = data[0].lat; document.getElementById('np-lng').value = data[0].lon; 
