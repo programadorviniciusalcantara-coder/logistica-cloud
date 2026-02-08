@@ -9,64 +9,40 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
-        
         * { box-sizing: border-box; }
         body { background: #fdfdfd; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; width: 100vw; margin: 0; padding: 0; }
-        
         #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background: #e5e5e5; }
-        
-        /* CARD DESLIZANTE COM FÍSICA */
-        .tracking-panel { 
-            position: fixed; bottom: 0; left: 0; right: 0; 
-            background: white; 
-            border-radius: 24px 24px 0 0; 
-            padding: 0 25px 40px 25px; 
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.2); 
-            z-index: 500; 
-            height: 85vh; /* Altura máxima */
-            transform: translateY(calc(100% - 190px)); /* Mostra o código e status */
-            transition: transform 0.1s ease-out; 
-            display: flex; flex-direction: column;
-            will-change: transform;
-        }
-
+        .tracking-panel { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 24px 24px 0 0; padding: 0 25px 40px 25px; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); z-index: 500; height: 85vh; transform: translateY(calc(100% - 210px)); transition: transform 0.1s ease-out; display: flex; flex-direction: column; will-change: transform; }
         .drag-area { width: 100%; padding: 15px 0; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; }
         .drag-handle { width: 60px; height: 6px; background: #d1d5db; border-radius: 10px; }
-
         .status-badge { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
         .st-pending { background: #FFF7ED; color: #EA580C; border: 1px solid #FFEDD5; }
         .st-route { background: #ECFDF5; color: #059669; border: 1px solid #D1FAE5; }
-        
         .search-overlay { position: fixed; inset: 0; background: white; z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
-        
         .pulse-ring { position: relative; }
         .pulse-ring::before { content: ''; position: absolute; inset: -10px; border-radius: 50%; background: rgba(255, 69, 0, 0.2); animation: pulse 2s infinite; z-index: -1; }
         @keyframes pulse { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
     </style>
 </head>
 <body>
-
     <div id="search-screen" class="search-overlay">
         <div class="mb-8 w-24 h-24 flex items-center justify-center bg-black rounded-3xl shadow-xl">
             <i class="fas fa-box-open text-white text-4xl"></i>
         </div>
         <h1 class="text-3xl font-black mb-2 text-center tracking-tight">Rastrear Entrega</h1>
         <p class="text-gray-400 text-sm font-medium mb-8 text-center max-w-xs">Cole o código recebido no WhatsApp.</p>
-        
         <div class="w-full max-w-sm">
             <input id="track-input" type="text" class="w-full p-5 bg-gray-50 border-2 border-gray-100 rounded-2xl mb-4 text-center text-lg font-bold outline-none focus:border-[#FF4500] focus:bg-white transition" placeholder="Código (Ex: PED-123)">
             <button onclick="buscarManual()" class="w-full bg-[#FF4500] text-white p-5 rounded-2xl font-black text-lg shadow-lg active:scale-95 transition">RASTREAR AGORA</button>
         </div>
     </div>
-
     <div id="map"></div>
-
     <div id="info-panel" class="tracking-panel hidden-panel">
         <div class="drag-area" id="drag-zone"><div class="drag-handle"></div></div>
         
-        <div class="text-center mb-2">
-            <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">Código de Recebimento</p>
-            <div id="delivery-code-display" class="text-3xl font-black text-black tracking-[0.2em] border-2 border-dashed border-gray-300 rounded-xl p-2 bg-gray-50 inline-block px-8">----</div>
+        <div class="text-center mb-4 p-4 bg-orange-50 rounded-xl border border-orange-100">
+            <p class="text-[10px] text-orange-600 font-bold uppercase mb-1 tracking-widest">ENTREGUE ESTE CÓDIGO AO MOTOBOY</p>
+            <div id="delivery-code-display" class="text-5xl font-black text-[#FF4500] tracking-[0.2em] drop-shadow-sm">----</div>
         </div>
 
         <div class="flex justify-between items-start mb-2 mt-2">
@@ -82,9 +58,7 @@
         </div>
 
         <div class="mt-4 p-5 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-4">
-            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-xl border border-gray-100 pulse-ring">
-                🏍️
-            </div>
+            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-xl border border-gray-100 pulse-ring">🏍️</div>
             <div class="flex-1">
                 <p class="text-xs text-gray-400 font-bold uppercase mb-0.5">Entregador</p>
                 <p id="driver-name" class="font-bold text-gray-800 text-lg">Procurando...</p>
@@ -95,9 +69,7 @@
             </div>
         </div>
 
-        <button onclick="contatoSuporte()" class="w-full mt-6 py-4 rounded-xl text-sm font-bold text-gray-400 hover:text-gray-600 transition">
-            Precisa de ajuda? Fale conosco
-        </button>
+        <button onclick="contatoSuporte()" class="w-full mt-6 py-4 rounded-xl text-sm font-bold text-gray-400 hover:text-gray-600 transition">Precisa de ajuda? Fale conosco</button>
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -119,16 +91,12 @@
 
         const panel = document.getElementById('info-panel');
         const dragZone = document.getElementById('drag-zone');
-        
         let startY = 0;
         let isDragging = false;
-        
-        const STATE_COLLAPSED = "calc(100% - 190px)";
+        const STATE_COLLAPSED = "calc(100% - 210px)";
         const STATE_EXPANDED = "0px";
 
-        dragZone.addEventListener('touchstart', (e) => {
-            startY = e.touches[0].clientY; isDragging = true; panel.style.transition = "none"; 
-        });
+        dragZone.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; panel.style.transition = "none"; });
         dragZone.addEventListener('touchmove', (e) => { if (!isDragging) return; });
         dragZone.addEventListener('touchend', (e) => {
             isDragging = false; panel.style.transition = "transform 0.3s ease-out";
@@ -136,10 +104,7 @@
             if (diff > 50) panel.style.transform = STATE_EXPANDED;
             else if (diff < -50) panel.style.transform = STATE_COLLAPSED;
         });
-        dragZone.addEventListener('click', () => {
-            if(panel.style.transform === STATE_EXPANDED) panel.style.transform = STATE_COLLAPSED;
-            else panel.style.transform = STATE_EXPANDED;
-        });
+        dragZone.addEventListener('click', () => { if(panel.style.transform === STATE_EXPANDED) panel.style.transform = STATE_COLLAPSED; else panel.style.transform = STATE_EXPANDED; });
 
         if(currentId) buscarManual(currentId);
 
@@ -169,10 +134,7 @@
             document.getElementById('delivery-code-display').innerText = o.delivery_code || '????';
 
             if(destMarker) map.removeLayer(destMarker);
-            destMarker = L.marker([o.lat, o.lng], {
-                icon: L.divIcon({ html: '<div style="background:#000; width:15px; height:15px; border-radius:50%; border:3px solid white; box-shadow:0 2px 10px rgba(0,0,0,0.2);"></div>', className: '' })
-            }).addTo(map);
-            
+            destMarker = L.marker([o.lat, o.lng], { icon: L.divIcon({ html: '<div style="background:#000; width:15px; height:15px; border-radius:50%; border:3px solid white; box-shadow:0 2px 10px rgba(0,0,0,0.2);"></div>', className: '' }) }).addTo(map);
             map.setView([o.lat, o.lng], 15);
 
             const badge = document.getElementById('status-badge');
