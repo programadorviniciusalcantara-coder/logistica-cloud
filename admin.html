@@ -15,7 +15,7 @@
         .sidebar { width: 260px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 20px rgba(0,0,0,0.1); }
         .logo-box { padding: 40px 20px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #222; margin-bottom: 20px; }
         
-        /* LOGO CORRIGIDO PARA O MENU */
+        /* LOGO TRANSPARENTE */
         #logo-container { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; background: transparent; border-radius: 20px; padding: 10px; border: 1px solid #333; }
         canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 
@@ -110,7 +110,9 @@
                 <div class="input-group"><label>Nome do Cliente</label><input type="text" id="np-name" placeholder="Ex: Maria Silva"></div>
                 <div class="input-group"><label>Valor (R$)</label><input type="text" id="np-price" oninput="maskMoney(this)" placeholder="R$ 0,00"></div>
                 <div class="input-group"><label>WhatsApp</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16" placeholder="(81) 9 0000-0000"></div>
+                
                 <div class="input-group"><label>Endereço Completo</label><input type="text" id="np-addr" onblur="buscarEndereco()" placeholder="Rua, Número, Bairro, Cidade - UF"></div>
+                
                 <input type="hidden" id="np-lat" value="0"><input type="hidden" id="np-lng" value="0">
                 <button id="btn-create" class="btn-save" onclick="saveOrder()">CRIAR PEDIDO E RASTREIO</button>
             </div>
@@ -144,6 +146,7 @@
         let map, mapCad, routeLayer, markers = {};
         const osmTile = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
+        // LOGO TRANSPARENTE
         const canvas = document.getElementById('logoCanvas');
         const ctx = canvas.getContext('2d');
         const img = new Image(); img.src = 'logo.png'; 
@@ -179,11 +182,12 @@
 
                 const driversOptions = (globalData.drivers || []).map(d => `<option value="${d.name}|${d.phone}">${d.name} (Online)</option>`).join('');
                 
+                // LISTA DE PENDENTES (COM LIXEIRA)
                 document.getElementById('pending-list').innerHTML = globalData.pendingOrders.map(o => `
                     <div class="order-card">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                             <span style="font-weight:800; font-size:16px;">${o.client_name}</span>
-                            <span style="background:#f3f4f6; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700;">R$ ${parseFloat(o.price).toFixed(2)}</span>
+                            <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button>
                         </div>
                         <div style="color:#6B7280; font-size:13px; margin-bottom:15px;"><i class="fas fa-map-marker-alt" style="color:var(--primary)"></i> ${o.address}</div>
                         <div style="display:flex; gap:10px;">
@@ -191,11 +195,15 @@
                             <button class="btn-dispatch" onclick="despachar('${o.id}')"><i class="fas fa-paper-plane"></i></button>
                         </div>
                     </div>
-                `).join('') || '<p style="color:#aaa; text-align:center;">Sem pedidos.</p>';
+                `).join('') || '<p style="color:#aaa; text-align:center; padding:20px;">Nenhum pedido pendente.</p>';
 
+                // LISTA DE MONITORAMENTO (COM LIXEIRA)
                 document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
                     <div style="padding:20px; border-bottom:1px solid #eee; background:#F9FAFB; border-radius:12px; margin-bottom:10px;">
-                        <div style="display:flex; justify-content:space-between;"><b>${o.client_name}</b><span style="color:var(--success); font-weight:bold;">Em Rota</span></div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <div><b>${o.client_name}</b> <span style="color:var(--success); font-weight:bold;">Em Rota</span></div>
+                            <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                        </div>
                         <small style="color:#6B7280;">Moto: ${o.driver_name}</small>
                         <div style="margin:10px 0; background:#FFF4EC; color:#FF4500; font-weight:900; padding:8px; border-radius:8px; text-align:center;">CÓDIGO: ${o.delivery_code || '----'}</div>
                         <div style="display:flex; gap:10px; margin-top:10px;">
@@ -210,21 +218,34 @@
             } catch (e) { console.error(e); }
         }
 
+        // NOVA FUNÇÃO: CANCELAR PEDIDO
+        async function cancelarPedido(id) {
+            if(!confirm("Tem certeza que deseja EXCLUIR este pedido?")) return;
+            try {
+                await fetch(`${API_URL}/delete-order/${id}`, { method: 'DELETE' });
+                refreshData();
+            } catch(e) { alert("Erro ao excluir."); }
+        }
+
         async function saveOrder() {
             const btn = document.getElementById('btn-create');
             const lat = document.getElementById('np-lat').value;
             const lng = document.getElementById('np-lng').value;
             
-            // TRAVA DE ENDEREÇO
             if(lat == 0 || lng == 0 || !lat || !lng) {
-                alert("⚠️ ATENÇÃO: Endereço não localizado!\n\nPor favor, digite o endereço completo (Rua, Cidade, Estado) e clique fora para buscar no mapa.");
+                alert("⚠️ ATENÇÃO: Endereço não localizado!\n\nPor favor, digite o endereço completo e clique fora para buscar.");
                 return;
             }
 
             btn.innerText = "⏳ SALVANDO..."; btn.disabled = true;
             try {
                 await fetch(`${API_URL}/register-delivery`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ store_slug: STORE_SLUG, clientName: document.getElementById('np-name').value, price: parseFloat(document.getElementById('np-price').value.replace('R$','').replace('.','').replace(',','.'))||0, phone: document.getElementById('np-phone').value, address: document.getElementById('np-addr').value, lat: lat, lng: lng }) });
-                alert("PEDIDO CRIADO!"); document.querySelectorAll('#novo-pedido input').forEach(i => i.value = ''); document.getElementById('np-lat').value = "0"; nav('dashboard'); refreshData();
+                alert("PEDIDO CRIADO!"); 
+                document.querySelectorAll('#novo-pedido input').forEach(i => i.value = ''); 
+                document.getElementById('np-lat').value = "0"; 
+                refreshData(); // Atualiza dados antes de mudar tela
+                nav('dashboard'); 
+                setTimeout(refreshData, 500); // Garante atualização
             } catch (e) { alert("Erro de conexão."); }
             btn.innerText = "CRIAR PEDIDO E RASTREIO"; btn.disabled = false;
         }
@@ -250,8 +271,8 @@
 
         async function buscarEndereco() {
             const addr = document.getElementById('np-addr').value; if(addr.length<5) return;
-            // Busca Geral, sem travar em Recife
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
+            // Busca Universal
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ', Brazil')}`);
             const data = await res.json(); 
             if(data.length){ 
                 document.getElementById('np-lat').value = data[0].lat; document.getElementById('np-lng').value = data[0].lon; 
