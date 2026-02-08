@@ -20,7 +20,6 @@
         .pulse { animation: pulse-animation 2s infinite; }
         @keyframes pulse-animation { 0% { box-shadow: 0 0 0 0 rgba(255, 69, 0, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 69, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 69, 0, 0); } }
         
-        /* CARD DESLIZANTE COM ALÇA */
         .bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 30px 30px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.15); z-index: 60; transform: translateY(110%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding: 10px 20px 100px 20px; }
         .bottom-sheet.active { transform: translateY(0); }
         .drag-handle { width: 40px; height: 5px; background: #e5e7eb; border-radius: 10px; margin: 5px auto 15px auto; cursor: grab; }
@@ -64,6 +63,8 @@
         const STORE = "igo-iphones";
         const socket = io(API);
         let map, marker, destMarker, isOnline = false, watchId;
+        // OSM tile provider
+        const osmTile = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
         
         const cvs = document.getElementById('logoCanvas'), ctx = cvs.getContext('2d'), img = new Image(); img.src = 'logo.png';
         img.onload = () => { cvs.width=img.width; cvs.height=img.height; ctx.drawImage(img,0,0); const d=ctx.getImageData(0,0,cvs.width,cvs.height); for(let i=0;i<d.data.length;i+=4) if(d.data[i]<45) d.data[i+3]=0; ctx.putImageData(d,0,0); };
@@ -71,7 +72,7 @@
         function init() {
             if(localStorage.getItem('d_phone')) document.getElementById('login-screen').style.display='none';
             map = L.map('map',{zoomControl:false}).setView([-8.05,-34.88],14);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+            L.tileLayer(osmTile, { maxZoom: 19 }).addTo(map);
             registrarNoServidor(); 
             socket.on("refresh_driver", buscarRota);
         }
@@ -87,14 +88,12 @@
             init();
         }
 
-        // Simulação do toque para abrir/fechar
         let isExpanded = false;
         function togglePanel() {
             const p = document.getElementById('order-panel');
             isExpanded = !isExpanded;
-            if(isExpanded) p.style.transform = "translateY(0)"; // Sobe tudo
-            else p.style.transform = "translateY(0)"; // Mantém no padrão (o padrão já é visível)
-            // No caso do motoboy, o padrão já é visível. Essa função é só visual se quiser expandir mais no futuro.
+            if(isExpanded) p.style.transform = "translateY(0)"; 
+            else p.style.transform = "translateY(0)"; // Mantém
         }
 
         function toggle() {
