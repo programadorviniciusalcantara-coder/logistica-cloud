@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin | Multi-Lojas Logistics</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <style>
+      :root {
+        --primary: #ff4500;
+        --danger: #ef4444;
+        --success: #22c55e;
+        --bg: #f8fafc;
+        --sidebar-bg: #000000;
+      }
+      body { margin: 0; font-family: "Segoe UI", sans-serif; background: var(--bg); display: flex; height: 100vh; overflow: hidden; }
+      .sidebar { width: 250px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; z-index: 10; }
+      .logo-box { padding: 30px 20px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #222; }
+      .igo-logo { width: 70px; height: 90px; border: 3px solid var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: black; }
+      .igo-logo span { color: white; font-size: 22px; font-weight: 900; }
+      .nav-item { padding: 15px 25px; cursor: pointer; display: flex; align-items: center; color: #aaa; transition: 0.2s; }
+      .nav-item i { margin-right: 12px; }
+      .nav-item:hover, .nav-item.active { background: #111; color: var(--primary); border-right: 4px solid var(--primary); }
+      .main { flex: 1; padding: 30px; overflow-y: auto; display: none; }
+      .main.active { display: block; }
+      .cards-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+      .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+      .card .value { font-size: 28px; font-weight: 800; color: #1e293b; }
+      .order-card { background: white; border: 1px solid #cbd5e1; border-left: 5px solid var(--primary); border-radius: 10px; padding: 15px; margin-bottom: 10px; }
+      .dispatch-controls { display: flex; gap: 10px; margin-top: 10px; }
+      .btn-dispatch { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+      .chat-frame { background: white; border: 1px solid #cbd5e1; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; height: 450px; }
+      .chat-body { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; }
+      .msg { padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; max-width: 85%; }
+      .msg.admin { background: var(--primary); color: white; align-self: flex-end; }
+      .msg.driver { background: #e2e8f0; align-self: flex-start; }
+      .form-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+      .input-group { margin-bottom: 15px; }
+      .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; }
+      .input-group input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
+      .btn-save { width: 100%; background: var(--primary); color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+      .monitor-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; height: 600px; }
+      #map { height: 100%; width: 100%; border-radius: 15px; }
+      .btn-link { background: #25d366; color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: bold; }
+      table { width: 100%; border-collapse: collapse; background: white; }
+      th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    </style>
+  </head>
+  <body>
+    <div class="sidebar">
+      <div class="logo-box">
+        <div class="igo-logo"><span id="sidebar-logo">iGO!</span></div>
+        <p id="store-title" style="font-weight: 900; margin-top: 10px">Carregando...</p>
+      </div>
+      <div class="nav-item active" onclick="nav('dashboard')"><i class="fas fa-home"></i> Painel</div>
+      <div class="nav-item" onclick="nav('novo-pedido')"><i class="fas fa-plus-circle"></i> Novo Pedido</div>
+      <div class="nav-item" onclick="nav('monitoramento')"><i class="fas fa-map-marked-alt"></i> Monitoramento</div>
+      <div class="nav-item" onclick="nav('historico')"><i class="fas fa-history"></i> Histórico</div>
+    </div>
+
+    <div id="dashboard" class="main active">
+      <h2>Dashboard</h2>
+      <div class="cards-container">
+        <div class="card" style="border-left: 5px solid var(--success)"><h3>Faturamento</h3><div class="value" id="dash-money">R$ 0,00</div></div>
+        <div class="card" style="border-left: 5px solid var(--primary)"><h3>Pendentes</h3><div class="value" id="dash-pending">0</div></div>
+        <div class="card" style="border-left: 5px solid #000"><h3>Em Rota</h3><div class="value" id="dash-active">0</div></div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px">
+        <div><h3>Aguardando</h3><div id="pending-list"></div></div>
+        <div class="chat-frame">
+            <div style="padding: 10px; font-weight: bold; background: #eee">Chat Central</div>
+            <div id="chat-msgs" class="chat-body"></div>
+            <div style="padding: 10px; display: flex; gap: 5px">
+                <input type="text" id="chat-txt" placeholder="Mensagem..." style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 5px;" />
+                <button onclick="sendMsg()" style="background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 5px;">Enviar</button>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="novo-pedido" class="main">
+        <h2>Novo Pedido</h2>
+        <div class="form-layout">
+          <div>
+            <div class="input-group"><label>Cliente</label><input type="text" id="np-name" /></div>
+            <div class="input-group"><label>Valor (R$)</label><input type="text" id="np-price" oninput="maskMoney(this)" /></div>
+            <div class="input-group"><label>WhatsApp</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16" /></div>
+            <div class="input-group"><label>Endereço</label><input type="text" id="np-addr" onblur="buscarEndereco()" /></div>
+            <input type="hidden" id="np-lat" /><input type="hidden" id="np-lng" />
+            <button id="btn-create" class="btn-save" onclick="saveOrder()">CRIAR PEDIDO</button>
+          </div>
+          <div id="map-cadastro" style="height: 350px; border-radius: 12px; border: 1px solid #ddd"></div>
+        </div>
+    </div>
+
+    <div id="monitoramento" class="main">
+        <h2>Monitoramento</h2>
+        <div class="monitor-layout"><div id="monitor-list" style="background: white; padding: 10px; border-radius: 12px; overflow-y: auto; border: 1px solid #ddd;"></div><div id="map"></div></div>
+    </div>
+
+    <div id="historico" class="main">
+        <h2>Histórico</h2>
+        <table><thead><tr><th>Data</th><th>Cliente</th><th>Valor</th><th>Moto</th></tr></thead><tbody id="history-body"></tbody></table>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      // CONFIGURAÇÃO MULTI-LOJA
+      const API_URL = "https://logistica-igo.onrender.com";
+      const urlParams = new URLSearchParams(window.location.search);
+      const STORE_SLUG = urlParams.get('store') || 'igo-iphones';
+      
+      const socket = io(API_URL);
+      socket.emit("join_store", STORE_SLUG);
+
+      // Personalização Visual por Loja
+      if(STORE_SLUG === 'oxeiphone') {
+          document.documentElement.style.setProperty('--primary', '#22c55e');
+          document.getElementById('sidebar-logo').innerText = 'OXE!';
+          document.getElementById('store-title').innerText = 'Oxe iPhone';
+      } else if(STORE_SLUG === 'iphone-zero-81') {
+          document.documentElement.style.setProperty('--primary', '#3b82f6');
+          document.getElementById('sidebar-logo').innerText = 'Z81';
+          document.getElementById('store-title').innerText = 'iPhone Zero 81';
+      } else {
+          document.getElementById('store-title').innerText = 'iGo iPhones';
+      }
+
+      let globalData = null;
+      const map = L.map("map").setView([-8.0592, -34.8996], 13);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+      let markers = {}, routeLayer = L.layerGroup().addTo(map);
+
+      const mapCad = L.map("map-cadastro", { zoomControl: false }).setView([-8.0592, -34.8996], 13);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapCad);
+      let cadMarker;
+
+      async function refreshData() {
+        const res = await fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`);
+        globalData = await res.json();
+        
+        document.getElementById("dash-money").innerText = (globalData.history || []).reduce((a, b) => a + (parseFloat(b.price) || 0), 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        document.getElementById("dash-pending").innerText = globalData.pendingOrders.length;
+        document.getElementById("dash-active").innerText = globalData.activeOrders.length;
+
+        document.getElementById("pending-list").innerHTML = globalData.pendingOrders.map(o => `
+            <div class="order-card">
+                <b>${o.client_name}</b><br><small>${o.address}</small>
+                <div class="dispatch-controls">
+                    <input type="text" id="moto-${o.id}" placeholder="Nome do Motoboy" style="padding:5px; border-radius:5px; border:1px solid #ddd;">
+                    <button class="btn-dispatch" onclick="despachar('${o.id}')">Enviar</button>
+                </div>
+            </div>
+        `).join("");
+
+        document.getElementById("monitor-list").innerHTML = globalData.activeOrders.map(o => `
+            <div style="padding:10px; border-bottom:1px solid #eee;">
+                <b>${o.client_name}</b><br><small>Moto: ${o.driver_name}</small>
+                <div style="display:flex; gap:5px; margin-top:5px;">
+                    <button class="btn-link" onclick="enviarLinkCliente('${o.id}', '${o.phone}', '${o.client_name}')">Zap Link</button>
+                    <button onclick="finalizar('${o.id}')" style="background:#000; color:#fff; border:none; padding:5px; border-radius:5px; font-size:10px;">Finalizar</button>
+                </div>
+            </div>
+        `).join("");
+      }
+
+      async function saveOrder() {
+        const price = parseFloat(document.getElementById("np-price").value.replace(/\D/g, "")) / 100;
+        await fetch(`${API_URL}/register-delivery`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            store_slug: STORE_SLUG,
+            clientName: document.getElementById("np-name").value,
+            price,
+            phone: document.getElementById("np-phone").value,
+            address: document.getElementById("np-addr").value,
+            lat: document.getElementById("np-lat").value,
+            lng: document.getElementById("np-lng").value
+          }),
+        });
+        alert("Pedido Criado!");
+        nav("dashboard");
+        refreshData();
+      }
+
+      async function despachar(id) {
+        const moto = document.getElementById("moto-"+id).value;
+        if(!moto) return alert("Digite o nome do motoboy");
+        await fetch(`${API_URL}/assign-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: id, driverName: moto, store_slug: STORE_SLUG }),
+        });
+        refreshData();
+      }
+
+      async function finalizar(id) {
+        if(confirm("Deseja finalizar esta entrega?")) {
+            await fetch(`${API_URL}/complete-delivery`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: id, store_slug: STORE_SLUG }),
+            });
+            refreshData();
+        }
+      }
+
+      function nav(id) {
+        document.querySelectorAll(".main").forEach(d => d.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+        if (id === "monitoramento") setTimeout(() => map.invalidateSize(), 200);
+        if (id === "novo-pedido") setTimeout(() => mapCad.invalidateSize(), 200);
+      }
+
+      function maskMoney(i) {
+        let v = i.value.replace(/\D/g, "") / 100;
+        i.value = v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      }
+
+      function maskPhone(i) {
+        let v = i.value.replace(/\D/g, "").substring(0, 11);
+        if (v.length > 2) v = `(${v.substring(0, 2)}) ${v.substring(2)}`;
+        if (v.length > 7) v = `${v.substring(0, 9)}-${v.substring(9)}`;
+        i.value = v;
+      }
+
+      async function buscarEndereco() {
+        const addr = document.getElementById("np-addr").value;
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ", Recife, PE")}`);
+        const data = await res.json();
+        if (data.length > 0) {
+          document.getElementById("np-lat").value = data[0].lat;
+          document.getElementById("np-lng").value = data[0].lon;
+          if (cadMarker) mapCad.removeLayer(cadMarker);
+          cadMarker = L.marker([data[0].lat, data[0].lon]).addTo(mapCad);
+          mapCad.setView([data[0].lat, data[0].lon], 16);
+        }
+      }
+
+      function enviarLinkCliente(id, phone, name) {
+        const link = `https://programadorviniciusalcantara-coder.github.io/logistica-cloud/index.html?id=${id}&store=${STORE_SLUG}`;
+        const msg = `Olá ${name}, sua entrega está a caminho! 🏍️\nAcompanhe aqui: ${link}`;
+        window.open(`https://wa.me/55${phone.replace(/\D/g,"")}?text=${encodeURIComponent(msg)}`, '_blank');
+      }
+
+      socket.on("refresh_admin", refreshData);
+      window.onload = refreshData;
+    </script>
+  </body>
+</html>
