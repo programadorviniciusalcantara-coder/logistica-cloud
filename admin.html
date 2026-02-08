@@ -168,8 +168,7 @@
             initMaps(); 
             socket.emit("join_store", STORE_SLUG); 
             refreshData(); 
-            // ATUALIZAÇÃO AUTOMÁTICA A CADA 5s
-            setInterval(refreshData, 5000);
+            setInterval(refreshData, 5000); // Polling de segurança
         };
         
         function nav(id) { 
@@ -190,7 +189,7 @@
 
                 const driversOptions = (globalData.drivers || []).map(d => `<option value="${d.name}|${d.phone}">${d.name} (Online)</option>`).join('');
                 
-                // --- LISTA DE PENDENTES (Renderização Forçada) ---
+                // --- LISTA DE PENDENTES (Renderização) ---
                 const pendingList = document.getElementById('pending-list');
                 if (globalData.pendingOrders.length === 0) {
                     pendingList.innerHTML = '<p style="color:#aaa; text-align:center; padding:20px;">Nenhum pedido pendente.</p>';
@@ -210,7 +209,7 @@
                     `).join('');
                 }
 
-                // --- LISTA DE MONITORAMENTO ---
+                // --- MONITORAMENTO ---
                 document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
                     <div style="padding:20px; border-bottom:1px solid #eee; background:#F9FAFB; border-radius:12px; margin-bottom:10px;">
                         <div style="display:flex; justify-content:space-between;">
@@ -239,6 +238,7 @@
             } catch(e) { alert("Erro ao excluir."); }
         }
 
+        // --- SALVAR COM VERIFICAÇÃO DE ERRO REAL ---
         async function saveOrder() {
             const btn = document.getElementById('btn-create');
             const lat = document.getElementById('np-lat').value;
@@ -251,16 +251,28 @@
 
             btn.innerText = "⏳ SALVANDO..."; btn.disabled = true;
             try {
-                await fetch(`${API_URL}/register-delivery`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ store_slug: STORE_SLUG, clientName: document.getElementById('np-name').value, price: parseFloat(document.getElementById('np-price').value.replace('R$','').replace('.','').replace(',','.'))||0, phone: document.getElementById('np-phone').value, address: document.getElementById('np-addr').value, lat: lat, lng: lng }) });
+                const res = await fetch(`${API_URL}/register-delivery`, { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ store_slug: STORE_SLUG, clientName: document.getElementById('np-name').value, price: parseFloat(document.getElementById('np-price').value.replace('R$','').replace('.','').replace(',','.'))||0, phone: document.getElementById('np-phone').value, address: document.getElementById('np-addr').value, lat: lat, lng: lng }) 
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || "Erro desconhecido");
+                }
+
                 alert("PEDIDO CRIADO!"); 
                 document.querySelectorAll('#novo-pedido input').forEach(i => i.value = ''); 
                 document.getElementById('np-lat').value = "0"; 
                 
                 nav('dashboard'); 
                 refreshData();
-                setTimeout(refreshData, 1000); 
+                setTimeout(refreshData, 500);
 
-            } catch (e) { alert("Erro de conexão."); }
+            } catch (e) { 
+                alert("Erro ao salvar: " + e.message); 
+            }
             btn.innerText = "CRIAR PEDIDO E RASTREIO"; btn.disabled = false;
         }
 
