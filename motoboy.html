@@ -3,268 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iGO Driver | Parceiro</title>
+    <title>iGO Driver</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
-    <style>
-        /* TEMA iGO iPHONES - CLARO, LARANJA E PRETO */
-        :root {
-            --igo-orange: #FF4500;
-            --igo-black: #000000;
-            --igo-white: #FFFFFF;
-        }
-
-        body { 
-            background-color: var(--igo-white); 
-            color: var(--igo-black); 
-            overflow: hidden; 
-            position: fixed; 
-            width: 100%; 
-            height: 100%; 
-            font-family: 'Inter', sans-serif; 
-        }
-        
-        /* Mapa Limpo e Claro (White Map) */
-        #map { height: 100vh; width: 100%; z-index: 1; }
-        
-        .status-bar { 
-            position: fixed; top: 0; left: 0; right: 0; height: 60px; 
-            background: rgba(255,255,255,0.95); backdrop-filter: blur(15px); 
-            z-index: 100; display: flex; align-items: center; justify-content: center; 
-            border-bottom: 2px solid #f0f0f0; 
-        }
-        
-        /* Botão GO - Laranja iGO */
-        .go-button { 
-            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); 
-            width: 85px; height: 85px; background: var(--igo-orange); border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            font-weight: 900; font-size: 20px; color: white; border: 5px solid var(--igo-white); 
-            box-shadow: 0 10px 25px rgba(255, 69, 0, 0.4); z-index: 101; 
-            cursor: pointer; transition: 0.4s; 
-        }
-        .go-button.online { background: var(--igo-black); border-color: var(--igo-orange); }
-        
-        .bottom-nav { 
-            position: fixed; bottom: 0; left: 0; right: 0; height: 80px; 
-            background: var(--igo-white); display: flex; align-items: center; 
-            justify-content: space-around; z-index: 150; border-top: 1px solid #eee; 
-        }
-        
-        .bottom-sheet { 
-            position: fixed; bottom: 80px; left: 0; right: 0; background: var(--igo-white); 
-            border-radius: 24px 24px 0 0; z-index: 110; transition: 0.5s; 
-            transform: translateY(105%); padding: 25px; 
-            box-shadow: 0 -15px 40px rgba(0,0,0,0.1); max-height: 70vh; 
-            overflow-y: auto; color: var(--igo-black); 
-        }
-        .bottom-sheet.active { transform: translateY(0); }
-        
-        #login-screen { 
-            position: fixed; inset: 0; background: var(--igo-white); z-index: 500; 
-            display: flex; flex-direction: column; align-items: center; 
-            justify-content: center; padding: 30px; 
-        }
-
-        .input-igo {
-            background: #f9f9f9; border: 1px solid #ddd; color: #000;
-        }
-
-        /* Container para o Canvas da Logo */
-        #logo-wrap { width: 130px; height: 130px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
-        canvas { max-width: 100%; max-height: 100%; }
-    </style>
+    <style>body{background:#fff;overflow:hidden;position:fixed;width:100%;height:100%;font-family:'Inter',sans-serif;}#map{height:100vh;width:100%;z-index:1;}.go-button{position:fixed;bottom:100px;left:50%;transform:translate(-50%);width:85px;height:85px;background:#FF4500;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;color:white;border:5px solid #fff;box-shadow:0 10px 25px rgba(255,69,0,0.4);z-index:101;cursor:pointer;}.go-button.online{background:#000;border-color:#FF4500;}.bottom-sheet{position:fixed;bottom:80px;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;z-index:110;transform:translateY(105%);padding:25px;box-shadow:0 -15px 40px rgba(0,0,0,0.1);transition:0.5s;}.bottom-sheet.active{transform:translateY(0);}#logo-wrap{width:130px;height:130px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;}canvas{max-width:100%;max-height:100%;}</style>
 </head>
 <body>
-
-    <div id="login-screen">
-        <div class="mb-10 text-center">
-            <div id="logo-wrap">
-                <canvas id="logoCanvas"></canvas>
-            </div>
-            <h1 class="text-3xl font-bold text-black italic">iGO <span class="text-[#FF4500]">DRIVER</span></h1>
-            <p class="text-gray-500 font-bold text-xs tracking-widest mt-2 uppercase">Parceiro de Entregas</p>
-        </div>
-        <input type="text" id="login-name" class="w-full max-w-xs input-igo p-5 rounded-2xl mb-4 text-lg outline-none focus:border-[#FF4500]" placeholder="Seu Nome">
-        <input type="tel" id="login-phone" class="w-full max-w-xs input-igo p-5 rounded-2xl mb-6 text-lg outline-none focus:border-[#FF4500]" placeholder="Telefone (ID Único)">
-        <button onclick="fazerLogin()" class="w-full max-w-xs bg-black text-white p-5 rounded-2xl font-black text-lg uppercase shadow-lg active:scale-95 transition">Entrar no Sistema</button>
+    <div id="login-screen" class="fixed inset-0 bg-white z-[500] flex flex-col items-center justify-center p-8">
+        <div id="logo-wrap"><canvas id="logoCanvas"></canvas></div>
+        <input id="login-name" class="w-full max-w-xs p-4 border rounded-xl mb-4" placeholder="Seu Nome">
+        <input id="login-phone" class="w-full max-w-xs p-4 border rounded-xl mb-4" placeholder="Telefone">
+        <button onclick="login()" class="w-full max-w-xs bg-black text-white p-4 rounded-xl font-bold">ENTRAR</button>
     </div>
-
-    <div class="status-bar">
-        <span class="text-gray-400 font-black text-xs tracking-[0.2em]" id="status-text">OFFLINE</span>
-    </div>
-
     <div id="map"></div>
-
-    <div id="btn-main" class="go-button" onclick="toggleStatus()"><span id="btn-text">GO</span></div>
-
-    <div class="bottom-sheet" id="order-panel">
-        <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8"></div>
-        <div id="order-content"></div>
-    </div>
-
-    <div class="bottom-sheet" id="history-panel">
-        <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8"></div>
-        <h2 class="text-2xl font-bold mb-6 italic">Minha Atividade</h2>
-        <div id="history-content" class="space-y-4"></div>
-    </div>
-
-    <nav class="bottom-nav">
-        <button onclick="abrirMapa()" class="text-[#FF4500] flex flex-col items-center">
-            <i class="fas fa-map text-xl"></i><span class="text-[10px] mt-1 font-bold">MAPA</span>
-        </button>
-        <button onclick="abrirHistorico()" class="text-gray-400 flex flex-col items-center">
-            <i class="fas fa-list text-xl"></i><span class="text-[10px] mt-1 font-bold">HISTÓRICO</span>
-        </button>
-    </nav>
-
+    <div id="btn-main" class="go-button" onclick="toggle()"><span id="btn-text">GO</span></div>
+    <div class="bottom-sheet" id="order-panel"><div id="order-content"></div></div>
+    
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- PROGRAMAÇÃO DA LOGO: TRANSPARÊNCIA AUTOMÁTICA ---
-        const canvas = document.getElementById('logoCanvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.src = 'logo.png'; // Referência ao arquivo logo.png que você subiu
+        const API = "https://logistica-igo.onrender.com";
+        const STORE = "igo-iphones";
+        const socket = io(API);
+        let map, marker, isOnline = false, watchId;
         
-        img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                // Remove pixels pretos (R, G, B < 45) para transparência no fundo branco
-                if (data[i] < 45 && data[i+1] < 45 && data[i+2] < 45) {
-                    data[i+3] = 0; 
-                }
+        const cvs = document.getElementById('logoCanvas'), ctx = cvs.getContext('2d'), img = new Image(); img.src = 'logo.png';
+        img.onload = () => { cvs.width=img.width; cvs.height=img.height; ctx.drawImage(img,0,0); const d=ctx.getImageData(0,0,cvs.width,cvs.height); for(let i=0;i<d.data.length;i+=4) if(d.data[i]<45) d.data[i+3]=0; ctx.putImageData(d,0,0); };
+
+        function init() {
+            if(localStorage.getItem('d_phone')) document.getElementById('login-screen').style.display='none';
+            map = L.map('map',{zoomControl:false}).setView([-8.05,-34.88],14);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+            registrarNoServidor(); // Garante registro ao iniciar
+            socket.on("refresh_driver", buscarRota);
+        }
+
+        // FUNÇÃO NOVA: Garante que o servidor saiba que estou aqui
+        function registrarNoServidor() {
+            if(localStorage.getItem('d_phone')) {
+                socket.emit("driver_join", { 
+                    store_slug: STORE, 
+                    name: localStorage.getItem('d_name'), 
+                    phone: localStorage.getItem('d_phone') 
+                });
             }
-            ctx.putImageData(imageData, 0, 0);
-        };
-
-        // --- LÓGICA DE CONEXÃO ATUALIZADA (VERCEL) ---
-        const API_URL = "https://jv-log.vercel.app";
-        const urlParams = new URLSearchParams(window.location.search);
-        const STORE_SLUG = urlParams.get('store') || 'igo-iphones';
-        let socket, map, driverMarker, isOnline = false;
-
-        window.onload = () => { if(localStorage.getItem('driver_phone')) { document.getElementById('login-screen').style.display = 'none'; iniciarApp(); } };
-
-        function fazerLogin() {
-            const nome = document.getElementById('login-name').value;
-            const fone = document.getElementById('login-phone').value;
-            if(!nome || !fone) return alert("Preencha todos os campos!");
-            localStorage.setItem('driver_name', nome);
-            localStorage.setItem('driver_phone', fone);
-            document.getElementById('login-screen').style.display = 'none';
-            iniciarApp();
         }
 
-        function iniciarApp() {
-            // MAPA CLARO (Estilo Positron / Light All)
-            map = L.map('map', { zoomControl: false }).setView([-8.05428, -34.8813], 15);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CARTO'
-            }).addTo(map);
+        // RECONEXÃO AUTOMÁTICA (Se cair a net)
+        socket.on('connect', () => {
+            if(isOnline) registrarNoServidor();
+        });
 
-            socket = io(API_URL);
-            socket.emit("join_store", STORE_SLUG);
-            socket.on("refresh_admin", () => { if(isOnline) buscarRota(); });
+        function login() {
+            const n=document.getElementById('login-name').value, p=document.getElementById('login-phone').value;
+            if(!n||!p) return alert("Preencha tudo");
+            localStorage.setItem('d_name',n); localStorage.setItem('d_phone',p);
+            document.getElementById('login-screen').style.display='none';
+            init();
         }
 
-        function toggleStatus() {
-            isOnline = !isOnline;
-            const btn = document.getElementById('btn-main');
-            const statusLabel = document.getElementById('status-text');
-            
-            statusLabel.innerText = isOnline ? "ONLINE" : "OFFLINE";
-            statusLabel.className = isOnline ? "text-[#FF4500] font-black text-xs tracking-[0.2em]" : "text-gray-400 font-black text-xs tracking-[0.2em]";
-            
-            btn.classList.toggle('online');
+        function toggle() {
+            isOnline=!isOnline;
+            document.getElementById('btn-main').className = isOnline ? "go-button online" : "go-button";
             document.getElementById('btn-text').innerText = isOnline ? "STOP" : "GO";
-
-            if(isOnline) { startGPS(); buscarRota(); } else { stopGPS(); document.getElementById('order-panel').classList.remove('active'); }
+            if(isOnline) {
+                registrarNoServidor(); // Reforça registro ao ficar online
+                watchId = navigator.geolocation.watchPosition(pos => {
+                    const {latitude:lat, longitude:lng} = pos.coords;
+                    if(marker) marker.setLatLng([lat,lng]); else marker=L.circleMarker([lat,lng],{radius:10,color:'#FF4500'}).addTo(map);
+                    map.flyTo([lat,lng],17);
+                    socket.emit("driver_location", { store_slug: STORE, phone: localStorage.getItem('d_phone'), lat, lng });
+                }, null, {enableHighAccuracy:true});
+                buscarRota();
+            } else {
+                navigator.geolocation.clearWatch(watchId);
+            }
         }
 
         async function buscarRota() {
-            const fone = localStorage.getItem('driver_phone');
-            const res = await fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`);
-            const data = await res.json();
-            const rota = data.activeOrders.find(o => o.driver_phone === fone);
-            if(rota) exibirRota(rota); else document.getElementById('order-panel').classList.remove('active');
+            try {
+                const res = await fetch(`${API}/api/dashboard/${STORE}`);
+                const data = await res.json();
+                const me = localStorage.getItem('d_phone');
+                const order = data.activeOrders.find(o => o.driver_phone === me);
+                
+                if(order) {
+                    document.getElementById('order-panel').classList.add('active');
+                    document.getElementById('order-content').innerHTML = `
+                        <h2 class="text-2xl font-bold mb-2">${order.client_name}</h2>
+                        <p class="text-gray-500 mb-4">${order.address}</p>
+                        <button onclick="fim('${order.id}')" class="w-full bg-black text-white p-4 rounded-xl font-bold">FINALIZAR</button>
+                    `;
+                } else {
+                    document.getElementById('order-panel').classList.remove('active');
+                }
+            } catch(e) { console.log("Erro rota", e); }
         }
 
-        function exibirRota(o) {
-            document.getElementById('order-panel').classList.add('active');
-            document.getElementById('order-content').innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="text-2xl font-black uppercase text-black">${o.client_name}</h3>
-                    <span class="text-xs font-bold text-gray-400">ID: ${o.id.slice(-4)}</span>
-                </div>
-                <p class="text-[#FF4500] font-black mb-6 text-3xl italic">R$ ${o.price}</p>
-                <div class="bg-gray-50 border border-gray-100 p-5 rounded-2xl mb-6 text-sm text-gray-600 font-medium">
-                    <i class="fas fa-location-dot mr-2 text-[#FF4500]"></i>${o.address}
-                </div>
-                <button onclick="concluir('${o.id}')" class="w-full bg-[#FF4500] text-white p-5 rounded-2xl font-black text-xl shadow-lg active:scale-95 transition">CONCLUIR ENTREGA</button>
-            `;
-        }
-
-        async function concluir(id) {
-            if(!confirm("Confirmar entrega concluída?")) return;
-            await fetch(`${API_URL}/complete-delivery`, { 
-                method: "POST", 
-                headers: { "Content-Type": "application/json" }, 
-                body: JSON.stringify({ orderId: id, store_slug: STORE_SLUG }) 
-            });
-            document.getElementById('order-panel').classList.remove('active');
+        async function fim(id) {
+            await fetch(`${API}/complete-delivery`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_slug:STORE, orderId:id}) });
             buscarRota();
         }
 
-        async function abrirHistorico() {
-            document.getElementById('order-panel').classList.remove('active');
-            document.getElementById('history-panel').classList.add('active');
-            const fone = localStorage.getItem('driver_phone');
-            const res = await fetch(`${API_URL}/api/driver-history/${STORE_SLUG}/${fone}`);
-            const data = await res.json();
-            document.getElementById('history-content').innerHTML = data.map(h => `
-                <div class="bg-gray-50 p-4 rounded-2xl flex justify-between items-center border border-gray-100">
-                    <div>
-                        <p class="font-bold text-black">${h.client_name}</p>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase">${new Date(h.completed_at).toLocaleDateString()}</p>
-                    </div>
-                    <span class="text-[#FF4500] font-black italic">R$ ${h.price}</span>
-                </div>
-            `).join('') || '<p class="text-center text-gray-300 font-bold py-10 uppercase text-xs">Sem atividade hoje</p>';
-        }
-
-        function abrirMapa() { document.getElementById('history-panel').classList.remove('active'); }
-
-        let watchId;
-        function startGPS() {
-            watchId = navigator.geolocation.watchPosition(pos => {
-                const { latitude, longitude } = pos.coords;
-                if(driverMarker) {
-                    driverMarker.setLatLng([latitude, longitude]);
-                } else {
-                    driverMarker = L.circleMarker([latitude, longitude], { 
-                        radius: 10, color: '#fff', weight: 4, fillColor: '#FF4500', fillOpacity: 1 
-                    }).addTo(map);
-                }
-                map.flyTo([latitude, longitude], 17);
-                socket.emit("driver_location", { 
-                    store_slug: STORE_SLUG, 
-                    driver_name: localStorage.getItem('driver_name'), 
-                    lat: latitude, 
-                    lng: longitude 
-                });
-            }, null, { enableHighAccuracy: true });
-        }
-
-        function stopGPS() {
-            if(watchId) navigator.geolocation.clearWatch(watchId);
-            watchId = null;
-        }
+        window.onload = init;
     </script>
 </body>
 </html>
