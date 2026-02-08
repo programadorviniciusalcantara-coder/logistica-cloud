@@ -3,31 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rastrear Pedido | iGO</title>
+    <title>Rastreio | iGO</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
-        body { background: #fdfdfd; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
+        body { background: #fdfdfd; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; width: 100vw; margin:0; padding:0; }
         
-        #map { height: 100%; width: 100%; z-index: 1; }
+        /* MAPA FUNDO TOTAL */
+        #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; z-index: 1; }
         
-        /* CARD DESLIZANTE (Uber Style) */
+        /* CARD DESLIZANTE */
         .tracking-panel { 
             position: fixed; bottom: 0; left: 0; right: 0; 
             background: white; 
             border-radius: 24px 24px 0 0; 
-            padding: 10px 25px 40px 25px; 
+            padding: 0 25px 40px 25px; 
             box-shadow: 0 -10px 40px rgba(0,0,0,0.15); 
             z-index: 500; 
-            transform: translateY(110%); 
-            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            max-height: 80vh;
+            transform: translateY(85%); /* Estado inicial: recolhido mostrando só o topo */
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            height: 80vh; /* Altura máxima */
+            display: flex; flex-direction: column;
         }
-        .tracking-panel.active { transform: translateY(0); }
         
-        .drag-handle { width: 40px; height: 5px; background: #e5e7eb; border-radius: 10px; margin: 10px auto 25px auto; cursor: grab; }
+        .tracking-panel.expanded { transform: translateY(0); } /* Estado expandido */
+        .tracking-panel.hidden-panel { transform: translateY(110%); } /* Escondido antes de buscar */
+
+        /* ÁREA DE TOQUE DA ALÇA */
+        .drag-area { width: 100%; height: 40px; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; }
+        .drag-handle { width: 50px; height: 6px; background: #e5e7eb; border-radius: 10px; }
 
         .status-badge { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
         .st-pending { background: #FFF7ED; color: #EA580C; border: 1px solid #FFEDD5; }
@@ -50,17 +56,19 @@
         <p class="text-gray-400 text-sm font-medium mb-8 text-center max-w-xs">Digite o código do seu pedido para acompanhar em tempo real.</p>
         
         <div class="w-full max-w-sm">
-            <input id="track-input" type="text" class="w-full p-5 bg-gray-50 border-2 border-gray-100 rounded-2xl mb-4 text-center text-lg font-bold outline-none focus:border-[#FF4500] focus:bg-white transition" placeholder="Cole o Código Aqui (Ex: PED-12345)">
+            <input id="track-input" type="text" class="w-full p-5 bg-gray-50 border-2 border-gray-100 rounded-2xl mb-4 text-center text-lg font-bold outline-none focus:border-[#FF4500] focus:bg-white transition" placeholder="Cole o Código Aqui">
             <button onclick="buscarManual()" class="w-full bg-[#FF4500] text-white p-5 rounded-2xl font-black text-lg shadow-lg active:scale-95 transition">RASTREAR AGORA</button>
         </div>
     </div>
 
     <div id="map"></div>
 
-    <div id="info-panel" class="tracking-panel">
-        <div class="drag-handle"></div>
+    <div id="info-panel" class="tracking-panel hidden-panel">
+        <div class="drag-area" id="drag-area" onclick="togglePanel()">
+            <div class="drag-handle"></div>
+        </div>
         
-        <div class="flex justify-between items-start mb-2">
+        <div class="flex justify-between items-start mb-2 mt-2">
             <div>
                 <div id="status-badge" class="status-badge st-pending"><i class="fas fa-circle text-[6px] mr-2"></i> AGUARDANDO</div>
                 <h2 id="client-name" class="text-2xl font-black leading-none text-gray-900 mb-1">...</h2>
@@ -105,10 +113,22 @@
         const urlParams = new URLSearchParams(window.location.search);
         let currentId = urlParams.get('id');
 
-        // INICIA MAPA
+        // INICIA MAPA LOGO, MAS FORÇA O REDESENHO
         map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-8.0592, -34.8996], 13);
         L.tileLayer(lightTile).addTo(map);
         routeLayer = L.layerGroup().addTo(map);
+
+        // LÓGICA DO CARD DESLIZANTE
+        let isExpanded = false;
+        function togglePanel() {
+            const panel = document.getElementById('info-panel');
+            isExpanded = !isExpanded;
+            if(isExpanded) {
+                panel.classList.add('expanded');
+            } else {
+                panel.classList.remove('expanded');
+            }
+        }
 
         if(currentId) {
             buscarManual(currentId);
@@ -126,10 +146,17 @@
 
                     if(order) {
                         document.getElementById('search-screen').style.display = 'none';
-                        document.getElementById('info-panel').classList.add('active');
+                        document.getElementById('info-panel').classList.remove('hidden-panel');
                         currentOrder = order;
                         renderizarPedido(order);
                         conectarSocket(order);
+                        
+                        // *** AQUI ESTÁ A CORREÇÃO DO MAPA ***
+                        // Espera o painel sumir e recalcula o tamanho do mapa 3 vezes
+                        setTimeout(() => map.invalidateSize(), 100);
+                        setTimeout(() => map.invalidateSize(), 500);
+                        setTimeout(() => map.invalidateSize(), 1000);
+                        
                     } else {
                         alert("Pedido não encontrado! Verifique o código.");
                     }
@@ -160,7 +187,6 @@
                 driverName.innerText = o.driver_name;
                 etaBox.classList.remove('hidden');
                 
-                // Força atualização imediata se tiver dados
                 if(o.driver_lat) atualizarPosicaoMoto(o.driver_lat, o.driver_lng);
             } else {
                 badge.innerHTML = '<i class="fas fa-clock mr-2"></i> PREPARANDO';
@@ -192,13 +218,13 @@
                 }).addTo(map);
             }
 
+            // Centraliza o mapa para mostrar Moto e Destino
             const group = new L.featureGroup([driverMarker, destMarker]);
-            map.fitBounds(group.getBounds(), { padding: [80, 80] });
+            map.fitBounds(group.getBounds(), { padding: [50, 50] });
 
             const dist = getDistanceFromLatLonInKm(lat, lng, currentOrder.lat, currentOrder.lng);
             document.getElementById('dist-val').innerText = dist.toFixed(1) + " km";
             
-            // Vel média motoboy: 30km/h = 0.5 km/min
             const tempo = Math.ceil(dist / 0.5); 
             document.getElementById('eta-time').innerText = tempo + " min";
         }
