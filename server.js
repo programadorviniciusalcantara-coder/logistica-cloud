@@ -10,7 +10,7 @@ const server = http.createServer(app);
 app.use(cors({ origin: "*", methods: ["GET", "POST"] }));
 app.use(express.json({ limit: "50mb" }));
 
-// Conexão com Banco de Dados (PostgreSQL)
+// Conexão com Banco de Dados
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -25,8 +25,6 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.get("/api/dashboard/:store", async (req, res) => {
   const { store } = req.params;
   try {
-    // Busca pedidos e histórico
-    // Nota: delivery_code é retornado para o admin ver também
     const pending = await pool.query("SELECT * FROM orders WHERE store_slug = $1 AND status = 'pending' ORDER BY created_at DESC", [store]);
     const active = await pool.query("SELECT * FROM orders WHERE store_slug = $1 AND status = 'on_route' ORDER BY created_at DESC", [store]);
     const history = await pool.query("SELECT * FROM delivery_history WHERE store_slug = $1 ORDER BY completed_at DESC LIMIT 50", [store]);
@@ -41,10 +39,9 @@ app.post("/register-delivery", async (req, res) => {
   const delivery_code = Math.floor(1000 + Math.random() * 9000).toString();
   
   const { store_slug, clientName, address, phone, price, lat, lng } = req.body;
-  const id = "PED-" + Math.floor(10000 + Math.random() * 90000); // ID legível
+  const id = "PED-" + Math.floor(10000 + Math.random() * 90000); 
   
   try {
-    // Garante que a tabela existe com as colunas certas
     await pool.query(`CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY, store_slug TEXT, client_name TEXT, address TEXT, 
         phone TEXT, price TEXT, lat TEXT, lng TEXT, status TEXT DEFAULT 'pending',
@@ -74,7 +71,6 @@ app.post("/assign-order", async (req, res) => {
     );
     io.to(store_slug).emit("refresh_admin");
     
-    // Notifica o motoboy específico
     const driverSocket = onlineDrivers.find(d => d.phone === driverPhone);
     if(driverSocket) io.to(driverSocket.socketId).emit("refresh_driver");
     
@@ -82,7 +78,6 @@ app.post("/assign-order", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Endpoint para Motoboy validar o código
 app.post("/verify-code", async (req, res) => {
     const { orderId, code } = req.body;
     try {
@@ -106,7 +101,6 @@ app.post("/complete-delivery", async (req, res) => {
     if (orderData.rows.length > 0) {
       const o = orderData.rows[0];
       
-      // Cria tabela de histórico se não existir, com suporte a assinatura
       await pool.query(`CREATE TABLE IF NOT EXISTS delivery_history (
         id TEXT PRIMARY KEY, store_slug TEXT, client_name TEXT, price TEXT, 
         driver_name TEXT, driver_phone TEXT, completed_at TIMESTAMP DEFAULT NOW(),
@@ -134,12 +128,10 @@ app.delete("/delete-history/:id", async (req, res) => {
     } catch(e) { res.status(500).json({error:e.message}); }
 });
 
-// --- SOCKET.IO ---
 io.on("connection", (socket) => {
   socket.on("join_store", (store) => { socket.join(store); });
   
   socket.on("driver_join", (data) => {
-      // Remove conexão antiga do mesmo telefone se existir
       onlineDrivers = onlineDrivers.filter(d => d.phone !== data.phone);
       onlineDrivers.push({ socketId: socket.id, ...data });
       io.to(data.store_slug).emit("refresh_admin");
@@ -148,14 +140,13 @@ io.on("connection", (socket) => {
   socket.on("driver_location", (data) => {
       const idx = onlineDrivers.findIndex(d => d.phone === data.phone);
       if(idx !== -1) { onlineDrivers[idx].lat = data.lat; onlineDrivers[idx].lng = data.lng; }
-      io.to(data.store_slug).emit("update_map", data); // Envia para o Admin e Cliente
+      io.to(data.store_slug).emit("update_map", data);
   });
   
   socket.on("send_chat_message", (data) => { io.emit("new_chat_message", data); });
   
   socket.on("disconnect", () => { 
       onlineDrivers = onlineDrivers.filter(d => d.socketId !== socket.id); 
-      // Opcional: Avisar admin que motoboy saiu
   });
 });
 
