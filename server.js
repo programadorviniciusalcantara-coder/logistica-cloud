@@ -10,6 +10,7 @@ const server = http.createServer(app);
 app.use(cors({ origin: "*", methods: ["GET", "POST"] }));
 app.use(express.json({ limit: "50mb" }));
 
+// Conexão com Banco de Dados (PostgreSQL)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -19,12 +20,13 @@ let onlineDrivers = [];
 
 const io = new Server(server, { cors: { origin: "*" } });
 
-// --- API ---
+// --- ENDPOINTS ---
 
 app.get("/api/dashboard/:store", async (req, res) => {
   const { store } = req.params;
   try {
-    // Agora retornamos também o delivery_code para o admin ver se precisar
+    // Busca pedidos e histórico
+    // Nota: delivery_code é retornado para o admin ver também
     const pending = await pool.query("SELECT * FROM orders WHERE store_slug = $1 AND status = 'pending' ORDER BY created_at DESC", [store]);
     const active = await pool.query("SELECT * FROM orders WHERE store_slug = $1 AND status = 'on_route' ORDER BY created_at DESC", [store]);
     const history = await pool.query("SELECT * FROM delivery_history WHERE store_slug = $1 ORDER BY completed_at DESC LIMIT 50", [store]);
@@ -35,19 +37,14 @@ app.get("/api/dashboard/:store", async (req, res) => {
 });
 
 app.post("/register-delivery", async (req, res) => {
-  // Gera código de 4 dígitos seguro
+  // GERA CÓDIGO DE 4 DÍGITOS
   const delivery_code = Math.floor(1000 + Math.random() * 9000).toString();
   
   const { store_slug, clientName, address, phone, price, lat, lng } = req.body;
-  const id = "PED-" + Math.floor(10000 + Math.random() * 90000);
+  const id = "PED-" + Math.floor(10000 + Math.random() * 90000); // ID legível
   
   try {
-    // ATENÇÃO: Se a coluna delivery_code não existir, o postgres ignora ou precisamos criar.
-    // Vou assumir que você pode rodar um comando SQL no seu banco, ou o código vai tentar inserir.
-    // Se der erro de coluna, avise. Mas vou tentar manter compatível.
-    // Para garantir, vamos salvar o código no campo 'obs' ou criar a tabela se não existir.
-    
-    // Check rápido para criar tabela se não existir (Segurança)
+    // Garante que a tabela existe com as colunas certas
     await pool.query(`CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY, store_slug TEXT, client_name TEXT, address TEXT, 
         phone TEXT, price TEXT, lat TEXT, lng TEXT, status TEXT DEFAULT 'pending',
@@ -59,6 +56,7 @@ app.post("/register-delivery", async (req, res) => {
       "INSERT INTO orders (id, store_slug, client_name, address, phone, price, lat, lng, delivery_code) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
       [id, store_slug, clientName, address, phone, price, lat, lng, delivery_code]
     );
+    
     io.to(store_slug).emit("refresh_admin");
     res.json({ success: true, code: delivery_code });
   } catch (err) { 
@@ -75,38 +73,16 @@ app.post("/assign-order", async (req, res) => {
       [driverName, driverPhone, orderId]
     );
     io.to(store_slug).emit("refresh_admin");
+    
+    // Notifica o motoboy específico
     const driverSocket = onlineDrivers.find(d => d.phone === driverPhone);
     if(driverSocket) io.to(driverSocket.socketId).emit("refresh_driver");
+    
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post("/complete-delivery", async (req, res) => {
-  const { orderId, store_slug, signature } = req.body; // Recebe assinatura
-  try {
-    const orderData = await pool.query("SELECT * FROM orders WHERE id = $1", [orderId]);
-    if (orderData.rows.length > 0) {
-      const o = orderData.rows[0];
-      
-      // Cria tabela historico com assinatura se nao existir
-      await pool.query(`CREATE TABLE IF NOT EXISTS delivery_history (
-        id TEXT PRIMARY KEY, store_slug TEXT, client_name TEXT, price TEXT, 
-        driver_name TEXT, driver_phone TEXT, completed_at TIMESTAMP DEFAULT NOW(),
-        signature TEXT
-      )`);
-
-      await pool.query(
-        "INSERT INTO delivery_history (id, store_slug, client_name, price, driver_name, driver_phone, signature) VALUES ($1, $2, $3, $4, $5, $6, $7)", 
-        [o.id, store_slug, o.client_name, o.price, o.driver_name, o.driver_phone, signature || '']
-      );
-      await pool.query("DELETE FROM orders WHERE id = $1", [orderId]);
-      io.to(store_slug).emit("refresh_admin");
-      res.json({ success: true });
-    }
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// Endpoint para validar código (Motoboy chama esse)
+// Endpoint para Motoboy validar o código
 app.post("/verify-code", async (req, res) => {
     const { orderId, code } = req.body;
     try {
@@ -123,6 +99,34 @@ app.post("/verify-code", async (req, res) => {
     } catch(e) { res.status(500).json({error: e.message}); }
 });
 
+app.post("/complete-delivery", async (req, res) => {
+  const { orderId, store_slug, signature } = req.body; 
+  try {
+    const orderData = await pool.query("SELECT * FROM orders WHERE id = $1", [orderId]);
+    if (orderData.rows.length > 0) {
+      const o = orderData.rows[0];
+      
+      // Cria tabela de histórico se não existir, com suporte a assinatura
+      await pool.query(`CREATE TABLE IF NOT EXISTS delivery_history (
+        id TEXT PRIMARY KEY, store_slug TEXT, client_name TEXT, price TEXT, 
+        driver_name TEXT, driver_phone TEXT, completed_at TIMESTAMP DEFAULT NOW(),
+        signature TEXT
+      )`);
+
+      await pool.query(
+        "INSERT INTO delivery_history (id, store_slug, client_name, price, driver_name, driver_phone, signature) VALUES ($1, $2, $3, $4, $5, $6, $7)", 
+        [o.id, store_slug, o.client_name, o.price, o.driver_name, o.driver_phone, signature || '']
+      );
+      
+      await pool.query("DELETE FROM orders WHERE id = $1", [orderId]);
+      io.to(store_slug).emit("refresh_admin");
+      res.json({ success: true });
+    } else {
+        res.status(404).json({error: "Pedido não encontrado"});
+    }
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.delete("/delete-history/:id", async (req, res) => {
     try {
         await pool.query("DELETE FROM delivery_history WHERE id = $1", [req.params.id]);
@@ -130,20 +134,29 @@ app.delete("/delete-history/:id", async (req, res) => {
     } catch(e) { res.status(500).json({error:e.message}); }
 });
 
+// --- SOCKET.IO ---
 io.on("connection", (socket) => {
   socket.on("join_store", (store) => { socket.join(store); });
+  
   socket.on("driver_join", (data) => {
+      // Remove conexão antiga do mesmo telefone se existir
       onlineDrivers = onlineDrivers.filter(d => d.phone !== data.phone);
       onlineDrivers.push({ socketId: socket.id, ...data });
       io.to(data.store_slug).emit("refresh_admin");
   });
+  
   socket.on("driver_location", (data) => {
       const idx = onlineDrivers.findIndex(d => d.phone === data.phone);
       if(idx !== -1) { onlineDrivers[idx].lat = data.lat; onlineDrivers[idx].lng = data.lng; }
-      io.to(data.store_slug).emit("update_map", data);
+      io.to(data.store_slug).emit("update_map", data); // Envia para o Admin e Cliente
   });
+  
   socket.on("send_chat_message", (data) => { io.emit("new_chat_message", data); });
-  socket.on("disconnect", () => { onlineDrivers = onlineDrivers.filter(d => d.socketId !== socket.id); });
+  
+  socket.on("disconnect", () => { 
+      onlineDrivers = onlineDrivers.filter(d => d.socketId !== socket.id); 
+      // Opcional: Avisar admin que motoboy saiu
+  });
 });
 
 const PORT = process.env.PORT || 3000;
