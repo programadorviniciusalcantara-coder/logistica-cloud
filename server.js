@@ -6,22 +6,38 @@ const { Pool } = require('pg');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { 
-    cors: { origin: "*", methods: ["GET", "POST"] } 
-});
 
-app.use(cors());
+// Configuração do CORS para aceitar pedidos da Vercel
+app.use(cors({
+    origin: "*", 
+    methods: ["GET", "POST", "DELETE"]
+}));
+
 app.use(express.json({ limit: "50mb" }));
 
-// Conexão com o Banco de Dados (Supabase) via Variável de Ambiente
+// Conexão com o Banco de Dados
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
-// --- ROTAS DA API ---
+// Teste de conexão com o banco ao iniciar
+pool.connect((err, client, release) => {
+  if (err) {
+    return console.error('ERRO AO CONECTAR NO SUPABASE:', err.stack);
+  }
+  console.log('CONEXÃO COM SUPABASE ESTABELECIDA COM SUCESSO!');
+  release();
+});
 
-// 1. Dashboard: Busca dados específicos de cada loja
+const io = new Server(server, { 
+    cors: { origin: "*", methods: ["GET", "POST"] } 
+});
+
+// --- ROTAS ---
+
+app.get("/", (req, res) => res.send("Servidor de Logística Multi-lojas Online!"));
+
 app.get("/api/dashboard/:store", async (req, res) => {
   const { store } = req.params;
   try {
@@ -34,26 +50,33 @@ app.get("/api/dashboard/:store", async (req, res) => {
       activeOrders: active.rows,
       history: history.rows
     });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error("Erro no Dashboard:", err);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
-// 2. Criar Pedido
 app.post("/register-delivery", async (req, res) => {
   const { store_slug, clientName, address, phone, price, lat, lng } = req.body;
   const id = "PED-" + Math.floor(1000 + Math.random() * 9000);
   const token = Math.floor(1000 + Math.random() * 9000).toString();
 
   try {
-    await pool.query(
-      "INSERT INTO orders (id, store_slug, client_name, address, phone, price, lat, lng, token) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-      [id, store_slug, clientName, address, phone, price, lat, lng, token]
-    );
+    console.log(`Tentando salvar pedido para: ${store_slug}`);
+    const queryText = "INSERT INTO orders (id, store_slug, client_name, address, phone, price, lat, lng, token) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *";
+    const values = [id, store_slug, clientName, address, phone, price, lat, lng, token];
+    
+    const result = await pool.query(queryText, values);
+    console.log("Pedido salvo com sucesso:", result.rows[0].id);
+    
     io.to(store_slug).emit("refresh_admin");
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    res.json({ success: true, order: result.rows[0] });
+  } catch (err) { 
+    console.error("ERRO AO SALVAR NO BANCO:", err.message);
+    res.status(500).json({ error: "Erro interno no banco de dados: " + err.message }); 
+  }
 });
 
-// 3. Despachar Pedido (Mudar para 'Em Rota')
 app.post("/assign-order", async (req, res) => {
   const { orderId, driverName, store_slug } = req.body;
   try {
@@ -63,7 +86,6 @@ app.post("/assign-order", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 4. Finalizar e Mover para Histórico
 app.post("/complete-delivery", async (req, res) => {
   const { orderId, store_slug } = req.body;
   try {
@@ -79,16 +101,14 @@ app.post("/complete-delivery", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- COMUNICAÇÃO EM TEMPO REAL (SOCKET.IO) ---
+// --- SOCKET.IO ---
 io.on("connection", (socket) => {
   socket.on("join_store", (store_slug) => {
-    socket.join(store_slug); // Cria uma sala privada para a loja
+    socket.join(store_slug);
   });
-
   socket.on("driver_location", (data) => {
     io.to(data.store_slug).emit("update_map", data);
   });
-
   socket.on("send_chat_message", (data) => {
     io.to(data.store_slug).emit("new_chat_message", data);
   });
