@@ -2,100 +2,217 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>iGO iPhones - Central Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iGO Admin | Central de Comando</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <style>
-        :root {
-            --igo-orange: #FF4500;
-            --igo-black: #111111;
-            --igo-white: #ffffff;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        
+        body { 
+            background-color: #fcfcfc; 
+            color: #000; 
+            font-family: 'Inter', sans-serif; 
         }
 
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f4f4f4; }
-
-        header {
-            background: var(--igo-black);
-            color: var(--igo-white);
-            padding: 15px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 5px solid var(--igo-orange);
+        .igo-gradient {
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
         }
 
-        .tab-menu { display: flex; gap: 15px; }
         .tab-btn {
-            background: none; border: none; color: white;
-            font-weight: bold; cursor: pointer; padding: 10px;
-            text-transform: uppercase; font-size: 13px;
-        }
-        .tab-btn.active { color: var(--igo-orange); border-bottom: 2px solid var(--igo-orange); }
-
-        .content { padding: 25px; }
-
-        /* Estilo iGO para os Cards */
-        .card {
-            background: white; padding: 25px; border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); max-width: 600px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
         }
 
-        input {
-            width: 100%; padding: 12px; margin: 8px 0;
-            border: 1px solid #ddd; border-radius: 6px;
+        .tab-btn.active {
+            color: #FF4500;
         }
 
-        .btn-primary {
-            background: var(--igo-orange); color: white; border: none;
-            padding: 15px; width: 100%; border-radius: 6px;
-            font-weight: bold; cursor: pointer; margin-top: 10px;
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #FF4500;
+            border-radius: 10px;
         }
 
-        #mapAdmin { height: 600px; width: 100%; border-radius: 12px; margin-top: 20px; border: 1px solid #ddd; }
+        #adminMap { 
+            height: 600px; 
+            width: 100%; 
+            border-radius: 24px; 
+            z-index: 1; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        input::placeholder { color: #9ca3af; }
     </style>
 </head>
-<body>
-    <header>
-        <div style="font-size: 20px; font-weight: bold;">iGO <span style="color:var(--igo-orange)">ADMIN</span></div>
-        <div class="tab-menu">
-            <button class="tab-btn active" onclick="switchTab('op')">Operacional</button>
-            <button class="tab-btn" onclick="switchTab('mon')">Monitoramento</button>
+<body class="bg-slate-50">
+
+    <header class="igo-gradient text-white pt-6 pb-6 px-8 shadow-2xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-4">
+                <img src="logo.jpg" class="w-14 h-14 object-contain rounded-xl bg-white p-1" alt="iGO">
+                <div>
+                    <h1 class="text-2xl font-black tracking-tighter italic">iGO <span class="text-[#FF4500]">ADMIN</span></h1>
+                    <p class="text-[10px] text-gray-400 font-bold tracking-[0.3em] uppercase">Recife Logistics Center</p>
+                </div>
+            </div>
+            
+            <nav class="flex gap-8">
+                <button onclick="showTab('op')" id="btn-op" class="tab-btn active font-black text-xs uppercase tracking-widest">Operacional</button>
+                <button onclick="showTab('mon')" id="btn-mon" class="tab-btn font-black text-xs uppercase tracking-widest text-gray-400">Monitoramento</button>
+                <button onclick="showTab('his')" id="btn-his" class="tab-btn font-black text-xs uppercase tracking-widest text-gray-400">Histórico</button>
+            </nav>
         </div>
     </header>
 
-    <div class="content" id="op-section">
-        <div class="card">
-            <h3 style="margin-top:0">Cadastrar Nova Entrega</h3>
-            <input type="text" id="cName" placeholder="Nome do Cliente">
-            <input type="text" id="cAddr" placeholder="Endereço em Recife">
-            <input type="text" id="cValue" placeholder="Valor da Venda (R$)">
-            <button class="btn-primary" onclick="generateOrder()">GERAR LINK DE RASTREIO</button>
-        </div>
-    </div>
+    <main class="max-w-7xl mx-auto p-6 md:p-10">
+        
+        <section id="tab-op" class="animate-in fade-in duration-500">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <div class="lg:col-span-1">
+                    <div class="bg-white p-8 rounded-[32px] shadow-xl border border-gray-100">
+                        <h2 class="text-xl font-black mb-8 flex items-center gap-3">
+                            <div class="w-8 h-8 bg-[#FF4500] rounded-lg flex items-center justify-center text-white text-sm">
+                                <i class="fas fa-plus"></i>
+                            </div>
+                            Nova Entrega
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-[10px] font-black text-gray-400 uppercase ml-2">Cliente</label>
+                                <input type="text" id="cName" placeholder="Ex: João Silva" class="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#FF4500] outline-none font-semibold transition-all">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-gray-400 uppercase ml-2">Endereço de Entrega</label>
+                                <input type="text" id="cAddr" placeholder="Rua, Número, Bairro" class="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#FF4500] outline-none font-semibold transition-all">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-gray-400 uppercase ml-2">Valor da Venda</label>
+                                <input type="text" id="cValue" placeholder="R$ 0,00" class="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#FF4500] outline-none font-bold text-[#FF4500] transition-all">
+                            </div>
+                            
+                            <button onclick="gerarPedido()" class="w-full bg-black text-white p-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg hover:bg-[#FF4500] active:scale-95 transition-all mt-6">
+                                Gerar Rastreio iGO
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-    <div class="content" id="mon-section" style="display:none">
-        <div id="mapAdmin"></div>
-    </div>
+                <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-[#FF4500] p-8 rounded-[32px] text-white shadow-xl flex justify-between items-center">
+                        <div>
+                            <p class="text-xs font-black uppercase opacity-80 italic">Entregas Ativas</p>
+                            <h3 class="text-5xl font-black mt-2">08</h3>
+                        </div>
+                        <i class="fas fa-truck-fast text-4xl opacity-30"></i>
+                    </div>
+                    <div class="bg-black p-8 rounded-[32px] text-white shadow-xl flex justify-between items-center">
+                        <div>
+                            <p class="text-xs font-black uppercase opacity-80 italic">Motoboys Online</p>
+                            <h3 class="text-5xl font-black mt-2">04</h3>
+                        </div>
+                        <i class="fas fa-motorcycle text-4xl opacity-30"></i>
+                    </div>
+                    
+                    <div class="md:col-span-2 bg-white p-8 rounded-[32px] shadow-xl border border-gray-100">
+                        <h3 class="text-lg font-black mb-6 italic">Atividade em Tempo Real</h3>
+                        <div class="space-y-4" id="mini-feed">
+                            <p class="text-gray-400 text-sm font-medium">Aguardando novos pedidos...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
+        <section id="tab-mon" class="hidden animate-in zoom-in-95 duration-500">
+            <div class="bg-white p-4 rounded-[35px] shadow-2xl border border-gray-100">
+                <div id="adminMap"></div>
+            </div>
+        </section>
+
+        <section id="tab-his" class="hidden animate-in slide-in-from-bottom-10 duration-500">
+            <div class="bg-white p-10 rounded-[40px] shadow-xl border border-gray-100">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black italic">Histórico de Vendas</h2>
+                        <p class="text-gray-400 font-bold text-xs uppercase tracking-widest mt-1">Relatórios de entrega concluídos</p>
+                    </div>
+                    <button onclick="limparHistorico()" class="bg-red-50 text-red-600 px-6 py-3 rounded-xl font-black text-xs uppercase hover:bg-red-600 hover:text-white transition-all border border-red-100">
+                        <i class="fas fa-trash-can mr-2"></i> Limpar Registros
+                    </button>
+                </div>
+                
+                <div id="lista-historico" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-6 bg-gray-50 rounded-2xl border border-gray-100 flex justify-between items-center">
+                        <span class="text-gray-400 font-bold">Nenhum registro para exibir no momento.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let adminMap;
+        const API_URL = "https://jv-log.vercel.app"; // URL ATUALIZADA DO VERCEL
+        const socket = io(API_URL);
+        let map;
 
-        function switchTab(target) {
-            document.getElementById('op-section').style.display = target === 'op' ? 'block' : 'none';
-            document.getElementById('mon-section').style.display = target === 'mon' ? 'block' : 'none';
+        function showTab(tab) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('active');
+                b.classList.add('text-gray-400');
+            });
             
-            if(target === 'mon' && !adminMap) {
-                // MAPA CLARO NO ADMIN
-                adminMap = L.map('mapAdmin').setView([-8.0578, -34.8829], 12);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; CARTO'
-                }).addTo(adminMap);
-            }
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`btn-${tab}`);
+            activeBtn.classList.add('active');
+            activeBtn.classList.remove('text-gray-400');
+
+            if(tab === 'mon' && !map) initAdminMap();
         }
 
-        function generateOrder() {
-            // Aqui entra sua lógica de POST para o servidor Node.js
-            alert("Lógica de integração com o servidor mantida!");
+        function initAdminMap() {
+            // MAPA ESTILO CLARO/BRANCO (Positron)
+            map = L.map('adminMap', { zoomControl: false }).setView([-8.0578, -34.8829], 12);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; CARTO'
+            }).addTo(map);
+        }
+
+        function gerarPedido() {
+            const name = document.getElementById('cName').value;
+            const addr = document.getElementById('cAddr').value;
+            if(!name || !addr) return alert("Preencha os dados do cliente!");
+            
+            // Simulação de lógica que já temos no Node.js
+            alert(`Link gerado para ${name}! O motoboy já pode assumir o pedido.`);
+        }
+
+        function limparHistorico() {
+            // SENHA ATUALIZADA 2026
+            const pass = prompt("CONFIRMAÇÃO DE SEGURANÇA:\nDigite a senha master para limpar o banco de dados:");
+            if (pass === "Abraao2026123") {
+                alert("SUCESSO: O histórico foi permanentemente removido.");
+            } else {
+                alert("ERRO: Senha incorreta. Acesso negado.");
+            }
         }
     </script>
 </body>
