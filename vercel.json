@@ -1,10 +1,5 @@
 {
   "version": 2,
-  "public": true,
   "cleanUrls": true,
-  "rewrites": [
-    { "source": "/admin", "destination": "/admin.html" },
-    { "source": "/motoboy", "destination": "/motoboy.html" },
-    { "source": "/rastreio", "destination": "/index.html" }
-  ]
+  "trailingSlash": false
 }
