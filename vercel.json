@@ -1,23 +1,10 @@
 {
   "version": 2,
+  "public": true,
   "cleanUrls": true,
-  "trailingSlash": false,
-  "routes": [
-    {
-      "src": "/admin.html",
-      "dest": "/admin.html"
-    },
-    {
-      "src": "/motoboy.html",
-      "dest": "/motoboy.html"
-    },
-    {
-      "src": "/index.html",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+  "rewrites": [
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/motoboy", "destination": "/motoboy.html" },
+    { "source": "/rastreio", "destination": "/index.html" }
   ]
 }
