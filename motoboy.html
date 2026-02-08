@@ -1,104 +1,252 @@
-<style>
-    /* ... (CSS anterior) ... */
-    
-    /* MODAL DE ASSINATURA */
-    #sig-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; display: none; align-items: center; justify-content: center; }
-    .sig-box { background: white; padding: 20px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; }
-    canvas { border: 2px dashed #ccc; border-radius: 10px; background: #fff; touch-action: none; }
-</style>
-
-<div id="sig-modal">
-    <div class="sig-box">
-        <h2 class="text-xl font-bold mb-4">Finalizar Entrega</h2>
-        <p class="text-gray-500 text-sm mb-2">Peça o código ao cliente:</p>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iGO Driver | Pro</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
+        body { background: #fdfdfd; font-family: 'Inter', sans-serif; overflow: hidden; height: 100%; width: 100%; position: fixed; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+        #login-screen { background: #fff; z-index: 999; }
+        .input-pro { background: #f3f4f6; border: 2px solid #e5e7eb; transition: 0.3s; }
+        .input-pro:focus { border-color: #FF4500; background: #fff; }
+        .go-btn-container { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); z-index: 50; }
+        .go-btn { width: 90px; height: 90px; border-radius: 50%; background: #FF4500; color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; box-shadow: 0 10px 30px rgba(255, 69, 0, 0.4); border: 4px solid white; transition: 0.3s; cursor: pointer; }
+        .go-btn.online { background: #111; border-color: #FF4500; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+        .pulse { animation: pulse-animation 2s infinite; }
+        @keyframes pulse-animation { 0% { box-shadow: 0 0 0 0 rgba(255, 69, 0, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 69, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 69, 0, 0); } }
         
-        <div class="flex justify-center gap-2 mb-4">
-            <input id="code-1" type="tel" maxlength="4" class="w-32 p-3 text-center text-2xl font-black border-2 border-black rounded-xl tracking-widest" placeholder="0000">
+        .bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 30px 30px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.15); z-index: 60; transform: translateY(110%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding: 10px 20px 100px 20px; }
+        .bottom-sheet.active { transform: translateY(0); }
+        .drag-handle { width: 40px; height: 5px; background: #e5e7eb; border-radius: 10px; margin: 5px auto 15px auto; cursor: grab; }
+        
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 20px 0; }
+        .action-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; border-radius: 16px; font-weight: 700; font-size: 12px; transition: 0.2s; }
+        .btn-waze { background: #FEF4E8; color: #33CCFF; }
+        .btn-maps { background: #E8F0FE; color: #1a73e8; }
+        .btn-zap { background: #E6FFFA; color: #25D366; }
+        .action-btn:active { transform: scale(0.95); }
+        .status-header { position: fixed; top: 0; left: 0; right: 0; height: 70px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); z-index: 40; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .status-badge { font-size: 12px; font-weight: 900; letter-spacing: 2px; padding: 5px 15px; border-radius: 20px; }
+        .st-off { background: #f3f4f6; color: #9ca3af; }
+        .st-on { background: #FFF4EC; color: #FF4500; border: 1px solid #FF4500; }
+
+        /* MODAL DE ASSINATURA */
+        #sig-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; display: none; align-items: center; justify-content: center; }
+        .sig-box { background: white; padding: 20px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; }
+        canvas { border: 2px dashed #ccc; border-radius: 10px; background: #fff; touch-action: none; width: 100%; height: 200px; }
+    </style>
+</head>
+<body>
+    <div id="login-screen" class="fixed inset-0 bg-white flex flex-col items-center justify-center p-8">
+        <div style="width:120px; height:120px; margin-bottom:20px;"><canvas id="logoCanvas"></canvas></div>
+        <h1 class="text-3xl font-black italic mb-1">iGO <span class="text-[#FF4500]">DRIVER</span></h1>
+        <p class="text-gray-400 text-xs font-bold tracking-[0.3em] mb-10 uppercase">Parceiro Logístico</p>
+        <div class="w-full max-w-sm space-y-4">
+            <input id="login-name" class="w-full p-5 rounded-2xl input-pro text-lg font-bold outline-none" placeholder="Seu Nome">
+            <input id="login-phone" type="tel" class="w-full p-5 rounded-2xl input-pro text-lg font-bold outline-none" placeholder="Seu Telefone">
+            <button onclick="login()" class="w-full bg-black text-white p-5 rounded-2xl font-black text-xl shadow-xl active:scale-95 transition">INICIAR TURNO</button>
         </div>
-
-        <p class="text-gray-500 text-sm mb-2">Assinatura do Cliente:</p>
-        <canvas id="sig-canvas" width="300" height="150"></canvas>
-        <button onclick="clearSig()" class="text-xs text-red-500 font-bold mb-4 mt-1">Limpar Assinatura</button>
-
-        <button onclick="confirmarEntrega()" class="w-full bg-black text-white p-4 rounded-xl font-bold text-lg">CONFIRMAR</button>
-        <button onclick="closeSig()" class="w-full mt-2 p-2 text-gray-500 font-bold">Cancelar</button>
     </div>
-</div>
-
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-    const API = "https://logistica-igo.onrender.com";
-    const STORE = "igo-iphones";
-    const socket = io(API);
-    let map, marker, destMarker, isOnline = false, watchId, currentOrderId;
+    <div class="status-header"><div id="status-badge" class="status-badge st-off">OFFLINE</div></div>
+    <div id="map"></div>
+    <div class="go-btn-container"><div id="btn-main" class="go-btn" onclick="toggle()">GO</div></div>
     
-    // ASSINATURA
-    const canvasSig = document.getElementById('sig-canvas');
-    const ctxSig = canvasSig.getContext('2d');
-    let painting = false;
+    <div class="bottom-sheet" id="order-panel">
+        <div class="drag-handle" onclick="togglePanel()"></div>
+        <div id="order-content"></div>
+    </div>
 
-    // ... (INICIALIZAÇÃO DO MAPA E LOGO IGUAIS AO ANTERIOR) ...
-    // ... (Use o código do motoboy da resposta anterior para map, login, etc) ...
+    <div id="sig-modal">
+        <div class="sig-box">
+            <h2 class="text-xl font-bold mb-4">Finalizar Entrega</h2>
+            <p class="text-gray-500 text-sm mb-2">Peça o código ao cliente:</p>
+            <div class="flex justify-center gap-2 mb-4">
+                <input id="code-1" type="tel" maxlength="4" class="w-32 p-3 text-center text-2xl font-black border-2 border-black rounded-xl tracking-widest" placeholder="0000">
+            </div>
+            <p class="text-gray-500 text-sm mb-2">Assinatura do Cliente:</p>
+            <canvas id="sig-canvas"></canvas>
+            <button onclick="clearSig()" class="text-xs text-red-500 font-bold mb-4 mt-1">Limpar Assinatura</button>
+            <button onclick="confirmarEntrega()" class="w-full bg-black text-white p-4 rounded-xl font-bold text-lg">CONFIRMAR</button>
+            <button onclick="closeSig()" class="w-full mt-2 p-2 text-gray-500 font-bold">Cancelar</button>
+        </div>
+    </div>
 
-    // --- FUNÇÃO NOVA: ABRIR MODAL DE ASSINATURA ---
-    function fim(id) {
-        currentOrderId = id;
-        document.getElementById('sig-modal').style.display = 'flex';
-        resizeCanvas();
-    }
-
-    function closeSig() { document.getElementById('sig-modal').style.display = 'none'; }
-    function clearSig() { ctxSig.clearRect(0, 0, canvasSig.width, canvasSig.height); }
-
-    // --- DESENHAR ASSINATURA ---
-    function startPosition(e) { painting = true; draw(e); }
-    function finishedPosition() { painting = false; ctxSig.beginPath(); }
-    function draw(e) {
-        if(!painting) return;
-        e.preventDefault();
-        const rect = canvasSig.getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-        ctxSig.lineWidth = 3; ctxSig.lineCap = 'round'; ctxSig.lineTo(x, y); ctxSig.stroke(); ctxSig.beginPath(); ctxSig.moveTo(x, y);
-    }
-
-    canvasSig.addEventListener('touchstart', startPosition);
-    canvasSig.addEventListener('touchend', finishedPosition);
-    canvasSig.addEventListener('touchmove', draw);
-    canvasSig.addEventListener('mousedown', startPosition);
-    canvasSig.addEventListener('mouseup', finishedPosition);
-    canvasSig.addEventListener('mousemove', draw);
-
-    // --- VERIFICAR CÓDIGO E ENVIAR ---
-    async function confirmarEntrega() {
-        const code = document.getElementById('code-1').value;
-        if(code.length < 4) return alert("Digite o código de 4 dígitos!");
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const API = "https://logistica-igo.onrender.com";
+        const STORE = "igo-iphones";
+        const socket = io(API);
+        let map, marker, destMarker, isOnline = false, watchId, currentOrderId;
+        const osmTile = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
         
-        // Verifica código no servidor
-        const res = await fetch(`${API}/verify-code`, {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ orderId: currentOrderId, code: code })
-        });
-        const data = await res.json();
-        
-        if(data.valid) {
-            // Se válido, envia a assinatura
-            const signature = canvasSig.toDataURL();
-            await fetch(`${API}/complete-delivery`, { 
-                method:'POST', headers:{'Content-Type':'application/json'}, 
-                body:JSON.stringify({store_slug:STORE, orderId: currentOrderId, signature: signature}) 
-            });
-            closeSig();
-            alert("Entrega Realizada com Sucesso! 💰");
-            document.getElementById('code-1').value = '';
-            clearSig();
-            buscarRota(); // Atualiza tela
-        } else {
-            alert("❌ CÓDIGO INCORRETO!");
+        const cvs = document.getElementById('logoCanvas'), ctx = cvs.getContext('2d'), img = new Image(); img.src = 'logo.png';
+        img.onload = () => { cvs.width=img.width; cvs.height=img.height; ctx.drawImage(img,0,0); const d=ctx.getImageData(0,0,cvs.width,cvs.height); for(let i=0;i<d.data.length;i+=4) if(d.data[i]<45) d.data[i+3]=0; ctx.putImageData(d,0,0); };
+
+        // Configuração Assinatura
+        const canvasSig = document.getElementById('sig-canvas');
+        const ctxSig = canvasSig.getContext('2d');
+        let painting = false;
+
+        function init() {
+            if(localStorage.getItem('d_phone')) document.getElementById('login-screen').style.display='none';
+            map = L.map('map',{zoomControl:false}).setView([-8.05,-34.88],14);
+            L.tileLayer(osmTile).addTo(map);
+            registrarNoServidor(); 
+            socket.on("refresh_driver", buscarRota);
+            
+            // Ajusta canvas
+            canvasSig.width = canvasSig.offsetWidth;
+            canvasSig.height = canvasSig.offsetHeight;
         }
-    }
-    
-    // ... (RESTO DAS FUNÇÕES login, toggle, buscarRota IGUAIS AO ANTERIOR) ...
-    // Certifique-se de manter a função buscarRota, init, registrarNoServidor, etc.
-</script>
+
+        function registrarNoServidor() { if(localStorage.getItem('d_phone')) socket.emit("driver_join", { store_slug: STORE, name: localStorage.getItem('d_name'), phone: localStorage.getItem('d_phone') }); }
+        socket.on('connect', () => { if(isOnline) registrarNoServidor(); });
+
+        function login() {
+            const n=document.getElementById('login-name').value, p=document.getElementById('login-phone').value;
+            if(!n||!p) return alert("Preencha tudo");
+            localStorage.setItem('d_name',n); localStorage.setItem('d_phone',p);
+            document.getElementById('login-screen').style.display='none';
+            init();
+        }
+
+        let isExpanded = false;
+        function togglePanel() {
+            const p = document.getElementById('order-panel');
+            isExpanded = !isExpanded;
+            if(isExpanded) p.style.transform = "translateY(0)"; 
+            else p.style.transform = "translateY(0)"; 
+        }
+
+        function toggle() {
+            isOnline=!isOnline;
+            const btn = document.getElementById('btn-main'), badge = document.getElementById('status-badge');
+            if(isOnline) {
+                btn.className = "go-btn online pulse"; btn.innerText = "STOP";
+                badge.className = "status-badge st-on"; badge.innerText = "ONLINE";
+                registrarNoServidor();
+                watchId = navigator.geolocation.watchPosition(pos => {
+                    const {latitude:lat, longitude:lng} = pos.coords;
+                    if(marker) marker.setLatLng([lat,lng]); else marker=L.circleMarker([lat,lng],{radius:10,color:'#FF4500',fillOpacity:1}).addTo(map);
+                    map.flyTo([lat,lng],17);
+                    socket.emit("driver_location", { store_slug: STORE, phone: localStorage.getItem('d_phone'), lat, lng });
+                }, null, {enableHighAccuracy:true});
+                buscarRota();
+            } else {
+                btn.className = "go-btn"; btn.innerText = "GO";
+                badge.className = "status-badge st-off"; badge.innerText = "OFFLINE";
+                navigator.geolocation.clearWatch(watchId);
+                document.getElementById('order-panel').classList.remove('active');
+                if(destMarker) map.removeLayer(destMarker);
+            }
+        }
+
+        async function buscarRota() {
+            try {
+                const res = await fetch(`${API}/api/dashboard/${STORE}`);
+                const data = await res.json();
+                const me = localStorage.getItem('d_phone');
+                const order = data.activeOrders.find(o => o.driver_phone === me);
+                
+                const painel = document.getElementById('order-panel');
+                const content = document.getElementById('order-content');
+
+                if(order) {
+                    painel.classList.add('active');
+                    if(destMarker) map.removeLayer(destMarker);
+                    destMarker = L.marker([order.lat, order.lng], {
+                         icon: L.divIcon({html: '<div style="background:#000; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.3)"><i class="fas fa-flag-checkered"></i></div>', className: ''})
+                    }).addTo(map);
+
+                    content.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h2 class="text-2xl font-black leading-none mb-1">${order.client_name}</h2>
+                                <p class="text-sm text-gray-400 font-bold">ID #${order.id.slice(-4)}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-4 rounded-xl mt-4 border border-gray-100">
+                            <p class="text-sm text-gray-600 font-medium"><i class="fas fa-map-marker-alt text-[#FF4500] mr-2"></i>${order.address}</p>
+                        </div>
+
+                        <div class="action-grid">
+                            <a href="https://wa.me/55${order.phone.replace(/\D/g,'')}" target="_blank" class="action-btn btn-zap"><i class="fab fa-whatsapp text-2xl mb-1"></i> Zap</a>
+                            <a href="https://waze.com/ul?ll=${order.lat},${order.lng}&navigate=yes" target="_blank" class="action-btn btn-waze"><i class="fab fa-waze text-2xl mb-1"></i> Waze</a>
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=${order.lat},${order.lng}" target="_blank" class="action-btn btn-maps"><i class="fas fa-map-marked-alt text-2xl mb-1"></i> Maps</a>
+                        </div>
+
+                        <button onclick="fim('${order.id}')" class="w-full bg-black text-white p-5 rounded-2xl font-black text-lg shadow-lg active:scale-95 transition mt-2">
+                            FINALIZAR ENTREGA <i class="fas fa-check-circle ml-2"></i>
+                        </button>
+                    `;
+                } else {
+                    painel.classList.remove('active');
+                    if(destMarker) map.removeLayer(destMarker);
+                }
+            } catch(e) { console.log("Erro rota", e); }
+        }
+
+        // --- LÓGICA DE ASSINATURA ---
+        function fim(id) {
+            currentOrderId = id;
+            document.getElementById('sig-modal').style.display = 'flex';
+        }
+
+        function closeSig() { document.getElementById('sig-modal').style.display = 'none'; }
+        function clearSig() { ctxSig.clearRect(0, 0, canvasSig.width, canvasSig.height); }
+
+        function startPosition(e) { painting = true; draw(e); }
+        function finishedPosition() { painting = false; ctxSig.beginPath(); }
+        function draw(e) {
+            if(!painting) return;
+            e.preventDefault();
+            const rect = canvasSig.getBoundingClientRect();
+            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+            ctxSig.lineWidth = 3; ctxSig.lineCap = 'round'; ctxSig.lineTo(x, y); ctxSig.stroke(); ctxSig.beginPath(); ctxSig.moveTo(x, y);
+        }
+
+        canvasSig.addEventListener('touchstart', startPosition);
+        canvasSig.addEventListener('touchend', finishedPosition);
+        canvasSig.addEventListener('touchmove', draw);
+        canvasSig.addEventListener('mousedown', startPosition);
+        canvasSig.addEventListener('mouseup', finishedPosition);
+        canvasSig.addEventListener('mousemove', draw);
+
+        async function confirmarEntrega() {
+            const code = document.getElementById('code-1').value;
+            if(code.length < 4) return alert("Digite o código de 4 dígitos!");
+            
+            const res = await fetch(`${API}/verify-code`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ orderId: currentOrderId, code: code })
+            });
+            const data = await res.json();
+            
+            if(data.valid) {
+                const signature = canvasSig.toDataURL();
+                await fetch(`${API}/complete-delivery`, { 
+                    method:'POST', headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify({store_slug:STORE, orderId: currentOrderId, signature: signature}) 
+                });
+                closeSig();
+                alert("Entrega Realizada com Sucesso! 💰");
+                document.getElementById('code-1').value = '';
+                clearSig();
+                buscarRota();
+            } else {
+                alert("❌ CÓDIGO INCORRETO!");
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
