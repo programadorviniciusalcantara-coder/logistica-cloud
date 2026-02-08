@@ -13,7 +13,6 @@
         * { box-sizing: border-box; }
         body { background: #fdfdfd; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; width: 100vw; margin: 0; padding: 0; }
         
-        /* MAPA: POSIÇÃO ABSOLUTA PARA GARANTIR QUE APAREÇA */
         #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background: #e5e5e5; }
         
         /* CARD DESLIZANTE COM FÍSICA */
@@ -25,26 +24,19 @@
             box-shadow: 0 -10px 40px rgba(0,0,0,0.2); 
             z-index: 500; 
             height: 85vh; /* Altura máxima */
-            transform: translateY(calc(100% - 190px)); /* MOSTRA O CÓDIGO E O STATUS */
-            transition: transform 0.1s ease-out; /* Movimento suave */
+            transform: translateY(calc(100% - 190px)); /* Mostra o código e status */
+            transition: transform 0.1s ease-out; 
             display: flex; flex-direction: column;
             will-change: transform;
         }
 
-        /* ÁREA DE TOQUE (ALÇA) */
-        .drag-area { 
-            width: 100%; padding: 15px 0; 
-            display: flex; align-items: center; justify-content: center; 
-            cursor: grab; touch-action: none; 
-        }
+        .drag-area { width: 100%; padding: 15px 0; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; }
         .drag-handle { width: 60px; height: 6px; background: #d1d5db; border-radius: 10px; }
 
-        /* STATUS */
         .status-badge { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
         .st-pending { background: #FFF7ED; color: #EA580C; border: 1px solid #FFEDD5; }
         .st-route { background: #ECFDF5; color: #059669; border: 1px solid #D1FAE5; }
         
-        /* TELA DE BUSCA */
         .search-overlay { position: fixed; inset: 0; background: white; z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
         
         .pulse-ring { position: relative; }
@@ -70,9 +62,7 @@
     <div id="map"></div>
 
     <div id="info-panel" class="tracking-panel hidden-panel">
-        <div class="drag-area" id="drag-zone">
-            <div class="drag-handle"></div>
-        </div>
+        <div class="drag-area" id="drag-zone"><div class="drag-handle"></div></div>
         
         <div class="text-center mb-2">
             <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">Código de Recebimento</p>
@@ -119,64 +109,39 @@
         
         let map, routeLayer, driverMarker, destMarker;
         let currentOrder = null;
-        // OSM tile provider
         const osmTile = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-        
         const urlParams = new URLSearchParams(window.location.search);
         let currentId = urlParams.get('id');
 
-        // --- INICIALIZAÇÃO DO MAPA ---
         map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-8.0592, -34.8996], 13);
         L.tileLayer(osmTile, { maxZoom: 19 }).addTo(map);
         routeLayer = L.layerGroup().addTo(map);
 
-        // --- LÓGICA DE ARRASTAR (TOUCH PHYSICS) ---
         const panel = document.getElementById('info-panel');
         const dragZone = document.getElementById('drag-zone');
         
         let startY = 0;
         let isDragging = false;
         
-        // Ajustei a altura inicial para mostrar o código
         const STATE_COLLAPSED = "calc(100% - 190px)";
         const STATE_EXPANDED = "0px";
 
         dragZone.addEventListener('touchstart', (e) => {
-            startY = e.touches[0].clientY;
-            isDragging = true;
-            panel.style.transition = "none"; 
+            startY = e.touches[0].clientY; isDragging = true; panel.style.transition = "none"; 
         });
-
-        dragZone.addEventListener('touchmove', (e) => {
-            if (!isDragging) return;
-            // Lógica simples visual
-        });
-
+        dragZone.addEventListener('touchmove', (e) => { if (!isDragging) return; });
         dragZone.addEventListener('touchend', (e) => {
-            isDragging = false;
-            panel.style.transition = "transform 0.3s ease-out";
-            const endY = e.changedTouches[0].clientY;
-            const diff = startY - endY;
-
-            if (diff > 50) { 
-                panel.style.transform = STATE_EXPANDED;
-            } else if (diff < -50) { 
-                panel.style.transform = STATE_COLLAPSED;
-            }
+            isDragging = false; panel.style.transition = "transform 0.3s ease-out";
+            const diff = startY - e.changedTouches[0].clientY;
+            if (diff > 50) panel.style.transform = STATE_EXPANDED;
+            else if (diff < -50) panel.style.transform = STATE_COLLAPSED;
         });
-        
         dragZone.addEventListener('click', () => {
-            if(panel.style.transform === STATE_EXPANDED) {
-                panel.style.transform = STATE_COLLAPSED;
-            } else {
-                panel.style.transform = STATE_EXPANDED;
-            }
+            if(panel.style.transform === STATE_EXPANDED) panel.style.transform = STATE_COLLAPSED;
+            else panel.style.transform = STATE_EXPANDED;
         });
 
-        // --- LÓGICA DE DADOS ---
-        if(currentId) {
-            buscarManual(currentId);
-        }
+        if(currentId) buscarManual(currentId);
 
         function buscarManual(val) {
             const term = val || document.getElementById('track-input').value.trim();
@@ -190,32 +155,22 @@
 
                     if(order) {
                         document.getElementById('search-screen').style.display = 'none';
-                        
-                        map.invalidateSize();
-                        setTimeout(() => map.invalidateSize(), 500);
-
+                        map.invalidateSize(); setTimeout(() => map.invalidateSize(), 500);
                         currentOrder = order;
                         renderizarPedido(order);
                         conectarSocket(order);
-                    } else {
-                        alert("Pedido não encontrado! Verifique o código.");
-                    }
-                })
-                .catch(() => alert("Erro de conexão. Tente novamente."));
+                    } else { alert("Pedido não encontrado! Verifique o código."); }
+                }).catch(() => alert("Erro de conexão."));
         }
 
         function renderizarPedido(o) {
             document.getElementById('client-name').innerText = o.client_name.split(' ')[0]; 
-            
-            // MOSTRAR CÓDIGO (LINHA IMPORTANTE)
+            // PREENCHE O CÓDIGO
             document.getElementById('delivery-code-display').innerText = o.delivery_code || '????';
 
             if(destMarker) map.removeLayer(destMarker);
             destMarker = L.marker([o.lat, o.lng], {
-                icon: L.divIcon({
-                    html: '<div style="background:#000; width:15px; height:15px; border-radius:50%; border:3px solid white; box-shadow:0 2px 10px rgba(0,0,0,0.2);"></div>',
-                    className: ''
-                })
+                icon: L.divIcon({ html: '<div style="background:#000; width:15px; height:15px; border-radius:50%; border:3px solid white; box-shadow:0 2px 10px rgba(0,0,0,0.2);"></div>', className: '' })
             }).addTo(map);
             
             map.setView([o.lat, o.lng], 15);
@@ -229,7 +184,6 @@
                 badge.className = "status-badge st-route";
                 driverName.innerText = o.driver_name;
                 etaBox.classList.remove('hidden');
-                
                 if(o.driver_lat) atualizarPosicaoMoto(o.driver_lat, o.driver_lng);
             } else {
                 badge.innerHTML = '<i class="fas fa-clock mr-2"></i> PREPARANDO';
@@ -242,32 +196,21 @@
         function conectarSocket(order) {
             socket.emit("join_store", STORE_SLUG);
             socket.on("update_map", (d) => {
-                if(order.driver_phone && d.phone === order.driver_phone) {
-                    atualizarPosicaoMoto(d.lat, d.lng);
-                }
+                if(order.driver_phone && d.phone === order.driver_phone) atualizarPosicaoMoto(d.lat, d.lng);
             });
         }
 
         function atualizarPosicaoMoto(lat, lng) {
             if(!lat || !lng) return;
-
             if(driverMarker) driverMarker.setLatLng([lat, lng]);
-            else {
-                driverMarker = L.marker([lat, lng], {
-                    icon: L.divIcon({
-                        html: '<div style="font-size:30px; filter:drop-shadow(0 5px 5px rgba(0,0,0,0.3));">🏍️</div>',
-                        className: ''
-                    })
-                }).addTo(map);
-            }
+            else driverMarker = L.marker([lat, lng], { icon: L.divIcon({ html: '<div style="font-size:30px; filter:drop-shadow(0 5px 5px rgba(0,0,0,0.3));">🏍️</div>', className: '' }) }).addTo(map);
 
             const group = new L.featureGroup([driverMarker, destMarker]);
             map.fitBounds(group.getBounds(), { padding: [80, 80] });
 
             const dist = getDistanceFromLatLonInKm(lat, lng, currentOrder.lat, currentOrder.lng);
             document.getElementById('dist-val').innerText = dist.toFixed(1) + " km";
-            const tempo = Math.ceil(dist / 0.5); 
-            document.getElementById('eta-time').innerText = tempo + " min";
+            document.getElementById('eta-time').innerText = Math.ceil(dist / 0.5) + " min";
         }
 
         function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
@@ -277,7 +220,6 @@
             return R * c;
         }
         function deg2rad(deg) { return deg * (Math.PI/180); }
-
         function contatoSuporte() { window.open('https://wa.me/5581999999999', '_blank'); }
     </script>
 </body>
