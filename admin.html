@@ -146,7 +146,6 @@
         let map, mapCad, routeLayer, markers = {};
         const osmTile = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-        // LOGO TRANSPARENTE
         const canvas = document.getElementById('logoCanvas');
         const ctx = canvas.getContext('2d');
         const img = new Image(); img.src = 'logo.png'; 
@@ -182,12 +181,12 @@
 
                 const driversOptions = (globalData.drivers || []).map(d => `<option value="${d.name}|${d.phone}">${d.name} (Online)</option>`).join('');
                 
-                // LISTA DE PENDENTES (COM LIXEIRA)
-                document.getElementById('pending-list').innerHTML = globalData.pendingOrders.map(o => `
+                // --- LISTA DE PENDENTES (COM BOTÃO DE EXCLUIR) ---
+                document.getElementById('pending-list').innerHTML = (globalData.pendingOrders || []).map(o => `
                     <div class="order-card">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                             <span style="font-weight:800; font-size:16px;">${o.client_name}</span>
-                            <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                            <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none; cursor:pointer; font-size:14px;"><i class="fas fa-trash"></i></button>
                         </div>
                         <div style="color:#6B7280; font-size:13px; margin-bottom:15px;"><i class="fas fa-map-marker-alt" style="color:var(--primary)"></i> ${o.address}</div>
                         <div style="display:flex; gap:10px;">
@@ -197,12 +196,12 @@
                     </div>
                 `).join('') || '<p style="color:#aaa; text-align:center; padding:20px;">Nenhum pedido pendente.</p>';
 
-                // LISTA DE MONITORAMENTO (COM LIXEIRA)
-                document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
+                // --- LISTA DE MONITORAMENTO (COM BOTÃO DE EXCLUIR) ---
+                document.getElementById('monitor-list').innerHTML = (globalData.activeOrders || []).map(o => `
                     <div style="padding:20px; border-bottom:1px solid #eee; background:#F9FAFB; border-radius:12px; margin-bottom:10px;">
                         <div style="display:flex; justify-content:space-between;">
                             <div><b>${o.client_name}</b> <span style="color:var(--success); font-weight:bold;">Em Rota</span></div>
-                            <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                            <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none; cursor:pointer; font-size:14px;"><i class="fas fa-trash"></i></button>
                         </div>
                         <small style="color:#6B7280;">Moto: ${o.driver_name}</small>
                         <div style="margin:10px 0; background:#FFF4EC; color:#FF4500; font-weight:900; padding:8px; border-radius:8px; text-align:center;">CÓDIGO: ${o.delivery_code || '----'}</div>
@@ -218,12 +217,12 @@
             } catch (e) { console.error(e); }
         }
 
-        // NOVA FUNÇÃO: CANCELAR PEDIDO
+        // --- FUNÇÃO PARA EXCLUIR PEDIDO ---
         async function cancelarPedido(id) {
-            if(!confirm("Tem certeza que deseja EXCLUIR este pedido?")) return;
+            if(!confirm("Tem certeza que deseja EXCLUIR este pedido permanentemente?")) return;
             try {
                 await fetch(`${API_URL}/delete-order/${id}`, { method: 'DELETE' });
-                refreshData();
+                setTimeout(refreshData, 500); // Aguarda e atualiza
             } catch(e) { alert("Erro ao excluir."); }
         }
 
@@ -233,7 +232,7 @@
             const lng = document.getElementById('np-lng').value;
             
             if(lat == 0 || lng == 0 || !lat || !lng) {
-                alert("⚠️ ATENÇÃO: Endereço não localizado!\n\nPor favor, digite o endereço completo e clique fora para buscar.");
+                alert("⚠️ ATENÇÃO: Endereço não localizado!\n\nPor favor, digite o endereço completo (Rua, Cidade, Estado) e clique fora para buscar no mapa.");
                 return;
             }
 
@@ -243,9 +242,12 @@
                 alert("PEDIDO CRIADO!"); 
                 document.querySelectorAll('#novo-pedido input').forEach(i => i.value = ''); 
                 document.getElementById('np-lat').value = "0"; 
-                refreshData(); // Atualiza dados antes de mudar tela
+                
+                // MÁGICA PARA APARECER NA TELA:
                 nav('dashboard'); 
-                setTimeout(refreshData, 500); // Garante atualização
+                refreshData();
+                setTimeout(refreshData, 500); // Garante 2x
+
             } catch (e) { alert("Erro de conexão."); }
             btn.innerText = "CRIAR PEDIDO E RASTREIO"; btn.disabled = false;
         }
@@ -271,8 +273,7 @@
 
         async function buscarEndereco() {
             const addr = document.getElementById('np-addr').value; if(addr.length<5) return;
-            // Busca Universal
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ', Brazil')}`);
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
             const data = await res.json(); 
             if(data.length){ 
                 document.getElementById('np-lat').value = data[0].lat; document.getElementById('np-lng').value = data[0].lon; 
