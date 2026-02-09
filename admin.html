@@ -34,7 +34,6 @@
 
         h2 { font-size: 24px; font-weight: 800; color: #111; margin-top: 0; margin-bottom: 30px; letter-spacing: -0.5px; }
         
-        /* FORMULÁRIO NA ESQUERDA E MAPA NA DIREITA */
         .form-layout { display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px; }
         #map, #map-cadastro { width: 100%; height: 500px !important; min-height: 500px !important; border-radius: 20px; border: 4px solid white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); background: #e5e5e5; display: block; position: relative; z-index: 1; }
         
@@ -146,6 +145,7 @@
         let globalData = { pendingOrders: [], activeOrders: [], drivers: [], history: [] };
         let map, mapCad, routeLayer, markers = {};
 
+        // LÓGICA DO LOGO
         const canvas = document.getElementById('logoCanvas');
         const ctx = canvas.getContext('2d');
         const img = new Image(); img.src = 'logo.png'; 
@@ -187,17 +187,32 @@
                     </div>
                 `).join('') || '<p style="color:#aaa; text-align:center;">Nenhum pedido pendente.</p>';
 
+                // --- MONITORAMENTO COM BOTÃO RASTREAR E SEM CÓDIGO ---
                 document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
                     <div class="order-card" style="border-left-color: #10B981;">
                         <div style="display:flex; justify-content:space-between;"><b>${o.client_name}</b> <button onclick="cancelarPedido('${o.id}')" style="color:red; border:none; background:none; cursor:pointer;"><i class="fas fa-trash"></i></button></div>
-                        <small>Moto: ${o.driver_name}</small>
-                        <div style="margin:10px 0; background:#FFF4EC; color:#FF4500; font-weight:900; padding:8px; border-radius:8px; text-align:center;">CÓDIGO: ${o.delivery_code}</div>
-                        <button onclick="enviarLink('${o.phone}', '${o.client_name}', '${o.id}')" style="width:100%; padding:10px; background:#25D366; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">WhatsApp Link</button>
+                        <small>Moto: ${o.driver_name}</small><br>
+                        <div style="display:flex; gap:10px; margin-top:15px;">
+                            <button onclick="focarPedido('${o.id}')" style="flex:1; padding:10px; background:#111; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fas fa-crosshairs"></i> Rastrear</button>
+                            <button onclick="enviarLink('${o.phone}', '${o.client_name}', '${o.id}')" style="flex:1; padding:10px; background:#25D366; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fab fa-whatsapp"></i> Link</button>
+                        </div>
                     </div>
                 `).join('') || '<p style="color:#aaa; text-align:center;">Nenhum pedido em rota.</p>';
                 
                 document.getElementById('history-body').innerHTML = globalData.history.map(h => `<tr><td>${new Date(h.completed_at).toLocaleDateString()}</td><td>${h.client_name}</td><td>R$ ${h.price}</td><td>${h.driver_name}</td><td><button onclick="delHist('${h.id}')" style="color:red; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button></td></tr>`).join('');
             } catch (e) { document.getElementById('status-dot').className = "dot offline"; document.getElementById('status-text').innerText = "Erro: " + e.message; }
+        }
+
+        // FUNÇÃO PARA FOCAR NO MAPA
+        function focarPedido(id) {
+            const o = globalData.activeOrders.find(x => x.id === id);
+            if (o) {
+                nav('monitoramento');
+                setTimeout(() => {
+                    map.setView([o.lat, o.lng], 16);
+                    map.invalidateSize();
+                }, 300);
+            }
         }
 
         async function saveOrder() {
@@ -211,7 +226,15 @@
 
         async function cancelarPedido(id) { if(confirm("Deseja apagar?")) await fetch(`${API_URL}/delete-order/${id}`, {method:'DELETE'}); refreshData(); }
         async function despachar(id) { const v=document.getElementById('sel-'+id).value; if(!v) return; const [n,p]=v.split('|'); await fetch(`${API_URL}/assign-order`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_slug:STORE_SLUG, orderId:id, driverName:n, driverPhone:p})}); refreshData(); }
-        function enviarLink(p, n, id) { window.open(`https://wa.me/55${p.replace(/\D/g,'')}?text=Rastreie seu pedido iGO: https://jv-log.vercel.app?id=${id}`, '_blank'); }
+        
+        function enviarLink(phone, name, orderId) {
+            const link = "https://jv-log.vercel.app";
+            const o = globalData.activeOrders.find(x => x.id === orderId);
+            const code = o ? o.delivery_code : "????";
+            const msg = `Olá *${name}*! 👋\n\nSeu pedido iGO saiu para entrega!\n\n🔐 *CÓDIGO DE SEGURANÇA: ${code}*\n(Informe este código ao entregador)\n\n📍 *Rastreie aqui:* ${link}?id=${orderId}`;
+            window.open(`https://wa.me/55${phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
         async function delHist(id) { if(prompt("Senha Master:")==="abraao123@") await fetch(`${API_URL}/delete-history/${id}`, {method:'DELETE'}); refreshData(); }
 
         async function buscarEndereco() {
@@ -223,7 +246,6 @@
 
         function maskMoney(i) { let v = i.value.replace(/\D/g, "") / 100; i.value = v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
         
-        // --- FUNÇÃO DE MÁSCARA DO WHATSAPP REFEITA DO ZERO ---
         function maskPhone(i) {
             let v = i.value.replace(/\D/g, "");
             if (v.length > 11) v = v.substring(0, 11);
