@@ -10,14 +10,33 @@ const server = http.createServer(app);
 app.use(cors({ origin: "*", methods: ["GET", "POST", "DELETE"] }));
 app.use(express.json({ limit: "50mb" }));
 
-// Conexão Banco de Dados
+// CONEXÃO COM O BANCO
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
-let onlineDrivers = [];
+// TESTE DE CONEXÃO AO INICIAR
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ ERRO FATAL: Não foi possível conectar ao Banco de Dados!', err.stack);
+  } else {
+    console.log('✅ BANCO DE DADOS CONECTADO COM SUCESSO!');
+    // Tenta criar a tabela assim que conecta
+    client.query(`CREATE TABLE IF NOT EXISTS orders_v2 (
+        id TEXT PRIMARY KEY, store_slug TEXT, client_name TEXT, address TEXT, 
+        phone TEXT, price TEXT, lat TEXT, lng TEXT, status TEXT DEFAULT 'pending',
+        driver_name TEXT, driver_phone TEXT, created_at TIMESTAMP DEFAULT NOW(),
+        delivery_code TEXT
+    )`, (err, res) => {
+        release();
+        if (err) console.error("❌ ERRO AO CRIAR TABELA orders_v2:", err);
+        else console.log("✅ TABELA orders_v2 VERIFICADA/CRIADA!");
+    });
+  }
+});
 
+let onlineDrivers = [];
 const io = new Server(server, { cors: { origin: "*" } });
 
 // --- ENDPOINTS ---
@@ -25,14 +44,17 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.get("/api/dashboard/:store", async (req, res) => {
   const { store } = req.params;
   try {
-    // TABELA NOVA: orders_v2
+    // Busca dados com tratamento de erro
     const pending = await pool.query("SELECT * FROM orders_v2 WHERE store_slug = $1 AND status = 'pending' ORDER BY created_at DESC", [store]);
     const active = await pool.query("SELECT * FROM orders_v2 WHERE store_slug = $1 AND status = 'on_route' ORDER BY created_at DESC", [store]);
     const history = await pool.query("SELECT * FROM delivery_history_v2 WHERE store_slug = $1 ORDER BY completed_at DESC LIMIT 50", [store]);
     
     const storeDrivers = onlineDrivers.filter(d => d.store_slug === store);
     res.json({ pendingOrders: pending.rows, activeOrders: active.rows, history: history.rows, drivers: storeDrivers });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+      console.error("Erro no Dashboard:", err);
+      res.status(500).json({ error: "Erro ao buscar dados: " + err.message }); 
+  }
 });
 
 app.post("/register-delivery", async (req, res) => {
@@ -41,23 +63,16 @@ app.post("/register-delivery", async (req, res) => {
   const id = "PED-" + Math.floor(10000 + Math.random() * 90000); 
   
   try {
-    // CRIA TABELA NOVA SE NÃO EXISTIR (V2)
-    await pool.query(`CREATE TABLE IF NOT EXISTS orders_v2 (
-        id TEXT PRIMARY KEY, store_slug TEXT, client_name TEXT, address TEXT, 
-        phone TEXT, price TEXT, lat TEXT, lng TEXT, status TEXT DEFAULT 'pending',
-        driver_name TEXT, driver_phone TEXT, created_at TIMESTAMP DEFAULT NOW(),
-        delivery_code TEXT
-    )`);
-
     await pool.query(
       "INSERT INTO orders_v2 (id, store_slug, client_name, address, phone, price, lat, lng, delivery_code, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')",
       [id, store_slug, clientName, address, phone, price, lat, lng, delivery_code]
     );
     
     io.to(store_slug).emit("refresh_admin");
+    console.log(`✅ Pedido ${id} criado com sucesso!`);
     res.json({ success: true, code: delivery_code });
   } catch (err) { 
-      console.error(err);
+      console.error("Erro ao criar pedido:", err);
       res.status(500).json({ error: "Erro no Banco: " + err.message }); 
   }
 });
