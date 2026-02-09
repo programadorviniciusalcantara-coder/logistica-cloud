@@ -10,41 +10,65 @@ const server = http.createServer(app);
 app.use(cors({ origin: "*", methods: ["GET", "POST", "DELETE"] }));
 app.use(express.json({ limit: "50mb" }));
 
-// CONEXÃO COM O BANCO
+// --- CONEXÃO BANCO DE DADOS ---
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false } // Necessário para Render/Neon
 });
 
-// TESTE DE CONEXÃO AO INICIAR
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('❌ ERRO FATAL: Não foi possível conectar ao Banco de Dados!', err.stack);
-  } else {
-    console.log('✅ BANCO DE DADOS CONECTADO COM SUCESSO!');
-    // Tenta criar a tabela assim que conecta
-    client.query(`CREATE TABLE IF NOT EXISTS orders_v2 (
-        id TEXT PRIMARY KEY, store_slug TEXT, client_name TEXT, address TEXT, 
-        phone TEXT, price TEXT, lat TEXT, lng TEXT, status TEXT DEFAULT 'pending',
-        driver_name TEXT, driver_phone TEXT, created_at TIMESTAMP DEFAULT NOW(),
-        delivery_code TEXT
-    )`, (err, res) => {
-        release();
-        if (err) console.error("❌ ERRO AO CRIAR TABELA orders_v2:", err);
-        else console.log("✅ TABELA orders_v2 VERIFICADA/CRIADA!");
-    });
-  }
-});
+// --- INICIALIZAÇÃO DAS TABELAS (Executa ao ligar) ---
+async function initDB() {
+    try {
+        console.log("🔄 Verificando Banco de Dados...");
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS orders_v2 (
+                id TEXT PRIMARY KEY, 
+                store_slug TEXT, 
+                client_name TEXT, 
+                address TEXT, 
+                phone TEXT, 
+                price TEXT, 
+                lat TEXT, 
+                lng TEXT, 
+                status TEXT DEFAULT 'pending',
+                driver_name TEXT, 
+                driver_phone TEXT, 
+                created_at TIMESTAMP DEFAULT NOW(),
+                delivery_code TEXT
+            );
+        `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS delivery_history_v2 (
+                id TEXT PRIMARY KEY, 
+                store_slug TEXT, 
+                client_name TEXT, 
+                price TEXT, 
+                driver_name TEXT, 
+                driver_phone TEXT, 
+                completed_at TIMESTAMP DEFAULT NOW(),
+                signature TEXT
+            );
+        `);
+        console.log("✅ TABELAS 'orders_v2' e 'delivery_history_v2' PRONTAS!");
+    } catch (err) {
+        console.error("❌ ERRO CRÍTICO AO INICIAR BANCO:", err);
+    }
+}
+initDB(); // Roda imediatamente
 
 let onlineDrivers = [];
 const io = new Server(server, { cors: { origin: "*" } });
 
 // --- ENDPOINTS ---
 
+// ROTA DE TESTE (Para saber se o server está vivo)
+app.get("/", (req, res) => {
+    res.send("Servidor Logística iGo Online! 🚀");
+});
+
 app.get("/api/dashboard/:store", async (req, res) => {
   const { store } = req.params;
   try {
-    // Busca dados com tratamento de erro
     const pending = await pool.query("SELECT * FROM orders_v2 WHERE store_slug = $1 AND status = 'pending' ORDER BY created_at DESC", [store]);
     const active = await pool.query("SELECT * FROM orders_v2 WHERE store_slug = $1 AND status = 'on_route' ORDER BY created_at DESC", [store]);
     const history = await pool.query("SELECT * FROM delivery_history_v2 WHERE store_slug = $1 ORDER BY completed_at DESC LIMIT 50", [store]);
@@ -52,8 +76,9 @@ app.get("/api/dashboard/:store", async (req, res) => {
     const storeDrivers = onlineDrivers.filter(d => d.store_slug === store);
     res.json({ pendingOrders: pending.rows, activeOrders: active.rows, history: history.rows, drivers: storeDrivers });
   } catch (err) { 
-      console.error("Erro no Dashboard:", err);
-      res.status(500).json({ error: "Erro ao buscar dados: " + err.message }); 
+      console.error("Erro Dashboard:", err);
+      // Retorna o erro exato para o frontend mostrar
+      res.status(500).json({ error: err.message, stack: err.stack }); 
   }
 });
 
@@ -63,17 +88,18 @@ app.post("/register-delivery", async (req, res) => {
   const id = "PED-" + Math.floor(10000 + Math.random() * 90000); 
   
   try {
+    // Insere direto (tabela já deve existir pelo initDB)
     await pool.query(
       "INSERT INTO orders_v2 (id, store_slug, client_name, address, phone, price, lat, lng, delivery_code, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')",
       [id, store_slug, clientName, address, phone, price, lat, lng, delivery_code]
     );
     
     io.to(store_slug).emit("refresh_admin");
-    console.log(`✅ Pedido ${id} criado com sucesso!`);
+    console.log(`✅ Pedido ${id} salvo.`);
     res.json({ success: true, code: delivery_code });
   } catch (err) { 
-      console.error("Erro ao criar pedido:", err);
-      res.status(500).json({ error: "Erro no Banco: " + err.message }); 
+      console.error("Erro ao salvar pedido:", err);
+      res.status(500).json({ error: err.message }); 
   }
 });
 
@@ -111,12 +137,8 @@ app.post("/verify-code", async (req, res) => {
     const { orderId, code } = req.body;
     try {
         const result = await pool.query("SELECT delivery_code FROM orders_v2 WHERE id = $1", [orderId]);
-        if(result.rows.length > 0) {
-            if(result.rows[0].delivery_code === code) {
-                res.json({ valid: true });
-            } else {
-                res.json({ valid: false });
-            }
+        if(result.rows.length > 0 && result.rows[0].delivery_code === code) {
+            res.json({ valid: true });
         } else {
             res.json({ valid: false });
         }
@@ -129,24 +151,14 @@ app.post("/complete-delivery", async (req, res) => {
     const orderData = await pool.query("SELECT * FROM orders_v2 WHERE id = $1", [orderId]);
     if (orderData.rows.length > 0) {
       const o = orderData.rows[0];
-      
-      await pool.query(`CREATE TABLE IF NOT EXISTS delivery_history_v2 (
-        id TEXT PRIMARY KEY, store_slug TEXT, client_name TEXT, price TEXT, 
-        driver_name TEXT, driver_phone TEXT, completed_at TIMESTAMP DEFAULT NOW(),
-        signature TEXT
-      )`);
-
       await pool.query(
         "INSERT INTO delivery_history_v2 (id, store_slug, client_name, price, driver_name, driver_phone, signature) VALUES ($1, $2, $3, $4, $5, $6, $7)", 
         [o.id, store_slug, o.client_name, o.price, o.driver_name, o.driver_phone, signature || '']
       );
-      
       await pool.query("DELETE FROM orders_v2 WHERE id = $1", [orderId]);
       io.to(store_slug).emit("refresh_admin");
       res.json({ success: true });
-    } else {
-        res.status(404).json({error: "Pedido não encontrado"});
-    }
+    } else { res.status(404).json({error: "Pedido não encontrado"}); }
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
