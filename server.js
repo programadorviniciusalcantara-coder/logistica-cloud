@@ -10,13 +10,13 @@ const server = http.createServer(app);
 app.use(cors({ origin: "*", methods: ["GET", "POST", "DELETE"] }));
 app.use(express.json({ limit: "50mb" }));
 
-// CONEXÃO BANCO DE DADOS
+// CONEXÃO COM O BANCO DE DADOS
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
-// FUNÇÃO PARA GARANTIR QUE AS TABELAS V3 EXISTAM
+// GARANTE QUE AS TABELAS V3 EXISTAM
 async function ensureTables() {
     const client = await pool.connect();
     try {
@@ -47,7 +47,7 @@ async function ensureTables() {
                 signature TEXT
             );
         `);
-    } catch (e) { console.error("Erro DB:", e); }
+    } catch (e) { console.error("Erro no DB:", e); }
     finally { client.release(); }
 }
 
@@ -92,7 +92,7 @@ app.post("/assign-order", async (req, res) => {
       [driverName, driverPhone, orderId]
     );
     io.to(store_slug).emit("refresh_admin");
-    io.emit("refresh_driver"); // AVISA O MOTOBOY
+    io.emit("refresh_driver");
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -154,4 +154,4 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => { onlineDrivers = onlineDrivers.filter(d => d.socketId !== socket.id); });
 });
 
-server.listen(process.env.PORT || 3000, () => console.log("Servidor V3 Rodando"));
+server.listen(process.env.PORT || 3000, () => console.log("Servidor Logística V3"));
