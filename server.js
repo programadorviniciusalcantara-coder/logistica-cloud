@@ -10,13 +10,13 @@ const server = http.createServer(app);
 app.use(cors({ origin: "*", methods: ["GET", "POST", "DELETE"] }));
 app.use(express.json({ limit: "50mb" }));
 
-// --- CONEXÃO BANCO DE DADOS ---
+// CONEXÃO BANCO DE DADOS
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
-// --- FUNÇÃO PARA GARANTIR QUE AS TABELAS EXISTAM (V3) ---
+// FUNÇÃO PARA GARANTIR QUE AS TABELAS V3 EXISTAM
 async function ensureTables() {
     const client = await pool.connect();
     try {
@@ -47,9 +47,8 @@ async function ensureTables() {
                 signature TEXT
             );
         `);
-    } finally {
-        client.release();
-    }
+    } catch (e) { console.error("Erro DB:", e); }
+    finally { client.release(); }
 }
 
 let onlineDrivers = [];
@@ -60,36 +59,29 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.get("/api/dashboard/:store", async (req, res) => {
   const { store } = req.params;
   try {
-    await ensureTables(); // Garante as tabelas antes de buscar
+    await ensureTables();
     const pending = await pool.query("SELECT * FROM orders_v3 WHERE store_slug = $1 AND status = 'pending' ORDER BY created_at DESC", [store]);
     const active = await pool.query("SELECT * FROM orders_v3 WHERE store_slug = $1 AND status = 'on_route' ORDER BY created_at DESC", [store]);
     const history = await pool.query("SELECT * FROM delivery_history_v3 WHERE store_slug = $1 ORDER BY completed_at DESC LIMIT 50", [store]);
     
     const storeDrivers = onlineDrivers.filter(d => d.store_slug === store);
     res.json({ pendingOrders: pending.rows, activeOrders: active.rows, history: history.rows, drivers: storeDrivers });
-  } catch (err) { 
-      console.error(err);
-      res.status(500).json({ error: err.message }); 
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post("/register-delivery", async (req, res) => {
   const delivery_code = Math.floor(1000 + Math.random() * 9000).toString();
   const { store_slug, clientName, address, phone, price, lat, lng } = req.body;
   const id = "PED-" + Math.floor(10000 + Math.random() * 90000); 
-  
   try {
     await ensureTables();
     await pool.query(
       "INSERT INTO orders_v3 (id, store_slug, client_name, address, phone, price, lat, lng, delivery_code, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')",
       [id, store_slug, clientName, address, phone, price, lat, lng, delivery_code]
     );
-    
     io.to(store_slug).emit("refresh_admin");
     res.json({ success: true, code: delivery_code });
-  } catch (err) { 
-      res.status(500).json({ error: err.message }); 
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post("/assign-order", async (req, res) => {
@@ -100,22 +92,16 @@ app.post("/assign-order", async (req, res) => {
       [driverName, driverPhone, orderId]
     );
     io.to(store_slug).emit("refresh_admin");
-    const driverSocket = onlineDrivers.find(d => d.phone === driverPhone);
-    if(driverSocket) io.to(driverSocket.socketId).emit("refresh_driver");
+    io.emit("refresh_driver"); // AVISA O MOTOBOY
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete("/delete-order/:id", async (req, res) => {
-    const { id } = req.params;
     try {
-        const order = await pool.query("SELECT store_slug FROM orders_v3 WHERE id = $1", [id]);
-        if(order.rows.length > 0) {
-            const store = order.rows[0].store_slug;
-            await pool.query("DELETE FROM orders_v3 WHERE id = $1", [id]);
-            io.to(store).emit("refresh_admin");
-            res.json({ success: true });
-        } else { res.status(404).json({ error: "Não encontrado" }); }
+        await pool.query("DELETE FROM orders_v3 WHERE id = $1", [req.params.id]);
+        io.emit("refresh_admin");
+        res.json({ success: true });
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -123,9 +109,8 @@ app.post("/verify-code", async (req, res) => {
     const { orderId, code } = req.body;
     try {
         const result = await pool.query("SELECT delivery_code FROM orders_v3 WHERE id = $1", [orderId]);
-        if(result.rows.length > 0 && result.rows[0].delivery_code === code) {
-            res.json({ valid: true });
-        } else { res.json({ valid: false }); }
+        if(result.rows.length > 0 && result.rows[0].delivery_code === code) res.json({ valid: true });
+        else res.json({ valid: false });
     } catch(e) { res.status(500).json({error: e.message}); }
 });
 
@@ -141,6 +126,7 @@ app.post("/complete-delivery", async (req, res) => {
       );
       await pool.query("DELETE FROM orders_v3 WHERE id = $1", [orderId]);
       io.to(store_slug).emit("refresh_admin");
+      io.emit("refresh_driver");
       res.json({ success: true });
     } else { res.status(404).json({error: "Não encontrado"}); }
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -168,5 +154,4 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => { onlineDrivers = onlineDrivers.filter(d => d.socketId !== socket.id); });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`V3 Rodando na porta ${PORT}`));
+server.listen(process.env.PORT || 3000, () => console.log("Servidor V3 Rodando"));
