@@ -114,8 +114,13 @@ io.on("connection", (socket) => {
   socket.on("join_store", (store) => { socket.join(store); });
   
   socket.on("driver_join", (data) => {
-      onlineDrivers = onlineDrivers.filter(d => d.phone !== data.phone);
-      onlineDrivers.push({ socketId: socket.id, lastSeen: Date.now(), ...data });
+      const idx = onlineDrivers.findIndex(d => d.phone === data.phone);
+      if(idx === -1) {
+          onlineDrivers.push({ socketId: socket.id, lastSeen: Date.now(), ...data });
+      } else {
+          onlineDrivers[idx].socketId = socket.id;
+          onlineDrivers[idx].lastSeen = Date.now();
+      }
       io.to(data.store_slug).emit("refresh_admin");
   });
 
@@ -125,7 +130,6 @@ io.on("connection", (socket) => {
           onlineDrivers[idx].lat = data.lat; 
           onlineDrivers[idx].lng = data.lng; 
           onlineDrivers[idx].lastSeen = Date.now();
-          onlineDrivers[idx].socketId = socket.id;
       } else {
           onlineDrivers.push({ socketId: socket.id, lastSeen: Date.now(), ...data });
       }
@@ -133,13 +137,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-      // Mantém vivo por 10 min mesmo se desconectar
+      // PERSISTÊNCIA: Não removemos o motoboy no disconnect
+      // Ele só sai da lista se ficar 10 min sem sinal GPS
   });
 });
 
+// Limpeza de motoboys realmente inativos (10 min)
 setInterval(() => {
-    const dezMinutos = Date.now() - (10 * 60 * 1000);
-    onlineDrivers = onlineDrivers.filter(d => d.lastSeen > dezMinutos);
+    const timeout = Date.now() - (10 * 60 * 1000);
+    onlineDrivers = onlineDrivers.filter(d => d.lastSeen > timeout);
 }, 60000);
 
-server.listen(process.env.PORT || 3000, () => console.log("Servidor Rodando V3.2"));
+server.listen(process.env.PORT || 3000, () => console.log("iGO Server V3.3"));
