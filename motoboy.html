@@ -16,7 +16,7 @@
     </div>
 
     <div id="painel" class="hidden">
-        <div class="bg-red-600 text-white text-[10px] p-1 text-center font-bold">GPS ATIVO - MANTENHA A TELA LIGADA</div>
+        <div class="bg-red-600 text-white text-[10px] p-1 text-center font-bold">MANTENHA A TELA LIGADA PARA O GPS FUNCIONAR</div>
         <div id="map" class="h-64 w-full"></div>
         <div class="p-5">
             <div id="corrida" class="bg-white p-6 rounded-2xl shadow-xl border-2 border-orange-500 hidden">
@@ -25,7 +25,7 @@
                 <button onclick="finalizar()" class="w-full bg-green-500 text-white p-5 rounded-xl font-bold text-lg">CONCLUIR ENTREGA</button>
             </div>
             <p id="status" class="text-center mt-10 text-gray-400 font-bold uppercase">Aguardando entrega...</p>
-            <button onclick="sair()" class="mt-10 text-gray-300 text-xs underline block mx-auto">Sair / Encerrar Turno</button>
+            <button onclick="sair()" class="mt-10 text-gray-300 text-xs underline block mx-auto">Encerrar Turno</button>
         </div>
     </div>
 
@@ -34,9 +34,8 @@
     <script>
         const API = "https://logistica-igo.onrender.com";
         const socket = io(API);
-        let map, marker, myPhone, myName, currentOrder = null;
+        let map, marker, destMarker, myPhone, myName, currentOrder = null;
 
-        // VERIFICA SE JÁ ESTAVA LOGADO
         window.onload = () => {
             const savedPhone = localStorage.getItem('driver_phone');
             const savedName = localStorage.getItem('driver_name');
@@ -50,20 +49,15 @@
         function entrar() {
             myPhone = document.getElementById('phone').value;
             myName = document.getElementById('name').value;
-            if(!myPhone || !myName) return alert("Preencha nome e telefone!");
-            
+            if(!myPhone || !myName) return alert("Preencha tudo!");
             localStorage.setItem('driver_phone', myPhone);
             localStorage.setItem('driver_name', myName);
-            
             document.getElementById('login').classList.add('hidden');
             document.getElementById('painel').classList.remove('hidden');
             init();
         }
 
-        function sair() {
-            localStorage.clear();
-            location.reload();
-        }
+        function sair() { localStorage.clear(); location.reload(); }
 
         function init() {
             if(!map) {
@@ -85,16 +79,22 @@
             const res = await fetch(`${API}/api/dashboard/igo-iphones`);
             const data = await res.json();
             const o = data.activeOrders.find(x => x.driver_phone === myPhone);
+            
             if(o) {
                 currentOrder = o;
                 document.getElementById('corrida').classList.remove('hidden');
                 document.getElementById('cliente').innerText = o.client_name;
                 document.getElementById('endereco').innerText = o.address;
                 document.getElementById('status').classList.add('hidden');
+
+                // Adiciona bandeira de destino no mapa do motoboy
+                if(destMarker) map.removeLayer(destMarker);
+                destMarker = L.marker([o.lat, o.lng], {icon: L.divIcon({html: '🚩', className: 'text-2xl'})}).addTo(map);
             } else {
                 currentOrder = null;
                 document.getElementById('corrida').classList.add('hidden');
                 document.getElementById('status').classList.remove('hidden');
+                if(destMarker) map.removeLayer(destMarker);
             }
         }
 
