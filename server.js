@@ -132,10 +132,8 @@ io.on("connection", (socket) => {
       io.to(data.store_slug).emit("update_map", data);
   });
 
-  // Limpeza suave: Só remove se ficar 10 minutos sem enviar sinal nenhum
   socket.on("disconnect", () => {
-      // onlineDrivers = onlineDrivers.filter(d => d.socketId !== socket.id); 
-      // Comentado para evitar que sumam ao minimizar
+      // Mantém vivo por 10 min mesmo se desconectar
   });
 });
 
@@ -144,4 +142,4 @@ setInterval(() => {
     onlineDrivers = onlineDrivers.filter(d => d.lastSeen > dezMinutos);
 }, 60000);
 
-server.listen(process.env.PORT || 3000, () => console.log("Servidor Rodando V3.1"));
+server.listen(process.env.PORT || 3000, () => console.log("Servidor Rodando V3.2"));
