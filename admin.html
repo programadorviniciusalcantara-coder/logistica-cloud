@@ -31,7 +31,6 @@
         #sys-status { position: fixed; top: 20px; right: 20px; background: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 9999; }
         .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
         .dot.online { background: var(--success); }
-        .dot.offline { background: var(--danger); }
     </style>
 </head>
 <body>
@@ -69,10 +68,10 @@
         <h2>Cadastrar Entrega</h2>
         <div class="form-layout">
             <div style="background:white; padding:30px; border-radius:20px;">
-                <div class="input-group"><label>Cliente</label><input type="text" id="np-name"></div>
-                <div class="input-group"><label>Valor</label><input type="text" id="np-price" oninput="maskMoney(this)"></div>
-                <div class="input-group"><label>WhatsApp</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16"></div>
-                <div class="input-group"><label>Endereço</label><input type="text" id="np-addr" onblur="buscarEndereco()"></div>
+                <div class="input-group"><label>Cliente</label><input type="text" id="np-name" placeholder="Ex: Maria Silva"></div>
+                <div class="input-group"><label>Valor</label><input type="text" id="np-price" oninput="maskMoney(this)" placeholder="R$ 0,00"></div>
+                <div class="input-group"><label>WhatsApp</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16" placeholder="(81) 9 0000-0000"></div>
+                <div class="input-group"><label>Endereço</label><input type="text" id="np-addr" onblur="buscarEndereco()" placeholder="Rua, Número, Bairro..."></div>
                 <input type="hidden" id="np-lat" value="0"><input type="hidden" id="np-lng" value="0">
                 <button id="btn-create" class="btn-save" onclick="saveOrder()">CRIAR PEDIDO</button>
             </div>
@@ -146,7 +145,7 @@
                 document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
                     <div class="order-card" style="border-left-color: #10B981;">
                         <div style="display:flex; justify-content:space-between;"><b>${o.client_name}</b> <button onclick="cancelarPedido('${o.id}')" style="color:red; border:none; background:none; cursor:pointer;"><i class="fas fa-trash"></i></button></div>
-                        <small>Moto: ${o.driver_name}</small><br>
+                        <small>Moto: ${o.driver_name}</small>
                         <div style="margin:10px 0; background:#FFF4EC; color:#FF4500; font-weight:900; padding:8px; border-radius:8px; text-align:center;">CÓDIGO: ${o.delivery_code}</div>
                         <button onclick="enviarLink('${o.phone}', '${o.client_name}', '${o.id}')" style="width:100%; padding:10px; background:#25D366; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">WhatsApp Link</button>
                     </div>
@@ -160,14 +159,13 @@
             const lat = document.getElementById('np-lat').value;
             if(lat == 0) return alert("Busque o endereço no mapa primeiro!");
             try {
-                const res = await fetch(`${API_URL}/register-delivery`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ store_slug:STORE_SLUG, clientName:document.getElementById('np-name').value, price:document.getElementById('np-price').value.replace('R$','').trim(), phone:document.getElementById('np-phone').value, address:document.getElementById('np-addr').value, lat, lng:document.getElementById('np-lng').value }) });
-                if(!res.ok) throw new Error("Erro Banco");
+                await fetch(`${API_URL}/register-delivery`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ store_slug:STORE_SLUG, clientName:document.getElementById('np-name').value, price:document.getElementById('np-price').value.replace('R$','').trim(), phone:document.getElementById('np-phone').value, address:document.getElementById('np-addr').value, lat, lng:document.getElementById('np-lng').value }) });
                 alert("Pedido Criado!"); nav('dashboard'); refreshData();
             } catch(e) { alert("Erro ao salvar."); }
         }
 
-        async function cancelarPedido(id) { if(confirm("Deseja apagar este pedido?")) await fetch(`${API_URL}/delete-order/${id}`, {method:'DELETE'}); refreshData(); }
-        async function despachar(id) { const v=document.getElementById('sel-'+id).value; if(!v) return alert("Selecione um motoboy!"); const [n,p]=v.split('|'); await fetch(`${API_URL}/assign-order`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_slug:STORE_SLUG, orderId:id, driverName:n, driverPhone:p})}); refreshData(); }
+        async function cancelarPedido(id) { if(confirm("Deseja apagar?")) await fetch(`${API_URL}/delete-order/${id}`, {method:'DELETE'}); refreshData(); }
+        async function despachar(id) { const v=document.getElementById('sel-'+id).value; if(!v) return; const [n,p]=v.split('|'); await fetch(`${API_URL}/assign-order`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_slug:STORE_SLUG, orderId:id, driverName:n, driverPhone:p})}); refreshData(); }
         function enviarLink(p, n, id) { window.open(`https://wa.me/55${p.replace(/\D/g,'')}?text=Rastreie seu pedido iGO: https://jv-log.vercel.app?id=${id}`, '_blank'); }
         async function delHist(id) { if(prompt("Senha Master:")==="abraao123@") await fetch(`${API_URL}/delete-history/${id}`, {method:'DELETE'}); refreshData(); }
 
