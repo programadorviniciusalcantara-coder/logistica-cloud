@@ -105,15 +105,10 @@
         const STORE_SLUG = "igo-iphones";
         const socket = io(API_URL);
         let globalData = { pendingOrders: [], activeOrders: [], drivers: [], history: [] };
-        let map, mapCad, markers = {};
+        let map, mapCad, markers = {}, destMarkers = {};
 
-        // Ícone de Moto Personalizado
-        const motoIcon = L.divIcon({
-            html: '<div style="font-size: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🏍️</div>',
-            className: 'moto-marker',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
-        });
+        const motoIcon = L.divIcon({ html: '<div style="font-size: 28px;">🏍️</div>', className: 'moto-marker', iconSize: [30, 30], iconAnchor: [15, 15] });
+        const destIcon = L.divIcon({ html: '<div style="font-size: 28px;">🚩</div>', className: 'dest-marker', iconSize: [30, 30], iconAnchor: [5, 25] });
 
         const canvas = document.getElementById('logoCanvas');
         const ctx = canvas.getContext('2d');
@@ -158,10 +153,10 @@
 
                 document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
                     <div class="order-card" style="border-left-color: #10B981;">
-                        <div style="display:flex; justify-content:space-between;"><b>${o.client_name}</b> <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none;"><i class="fas fa-trash"></i></button></div>
+                        <div style="display:flex; justify-content:space-between;"><b>${o.client_name}</b> <button onclick="cancelarPedido('${o.id}')" style="color:red; border:none; background:none;"><i class="fas fa-trash"></i></button></div>
                         <small>Moto: ${o.driver_name}</small><br>
                         <div style="display:flex; gap:10px; margin-top:15px;">
-                            <button onclick="focarPedido('${o.driver_phone}')" style="flex:1; padding:10px; background:#111; color:white; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fas fa-crosshairs"></i> Rastrear</button>
+                            <button onclick="focarPedido('${o.driver_phone}', '${o.lat}', '${o.lng}')" style="flex:1; padding:10px; background:#111; color:white; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fas fa-crosshairs"></i> Rastrear</button>
                             <button onclick="enviarLink('${o.phone}', '${o.client_name}', '${o.id}')" style="flex:1; padding:10px; background:#25D366; color:white; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fab fa-whatsapp"></i> Link</button>
                         </div>
                     </div>
@@ -169,27 +164,30 @@
                 
                 document.getElementById('history-body').innerHTML = globalData.history.map(h => `<tr><td>${new Date(h.completed_at).toLocaleDateString()}</td><td>${h.client_name}</td><td>R$ ${h.price}</td><td>${h.driver_name}</td><td><button onclick="delHist('${h.id}')" style="color:red; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button></td></tr>`).join('');
             
-                // Atualiza marcadores existentes se o sinal cair mas o driver ainda estiver na lista
-                globalData.drivers.forEach(d => {
-                    if(d.lat && d.lng) atualizarMotoNoMapa(d);
-                });
+                globalData.drivers.forEach(d => { if(d.lat && d.lng) atualizarMotoNoMapa(d); });
 
             } catch (e) { document.getElementById('status-dot').className = "dot offline"; document.getElementById('status-text').innerText = "Erro: " + e.message; }
         }
 
         function atualizarMotoNoMapa(d) {
-            if(!markers[d.phone]) {
-                markers[d.phone] = L.marker([d.lat, d.lng], {icon: motoIcon}).addTo(map).bindPopup(`<b>${d.name}</b>`);
-            } else {
-                markers[d.phone].setLatLng([d.lat, d.lng]);
-            }
+            if(!markers[d.phone]) { markers[d.phone] = L.marker([d.lat, d.lng], {icon: motoIcon}).addTo(map).bindPopup(`<b>${d.name}</b>`); } 
+            else { markers[d.phone].setLatLng([d.lat, d.lng]); }
         }
 
-        function focarPedido(phone) {
-            if(markers[phone]) {
-                nav('monitoramento');
-                setTimeout(() => { map.setView(markers[phone].getLatLng(), 16); markers[phone].openPopup(); }, 300);
-            } else { alert("Motoboy sem sinal de GPS no momento."); }
+        function focarPedido(phone, destLat, destLng) {
+            nav('monitoramento');
+            setTimeout(() => {
+                if(destMarkers[phone]) map.removeLayer(destMarkers[phone]);
+                destMarkers[phone] = L.marker([destLat, destLng], {icon: destIcon}).addTo(map).bindPopup("Destino da Entrega");
+                
+                if(markers[phone]) {
+                    const group = new L.featureGroup([markers[phone], destMarkers[phone]]);
+                    map.fitBounds(group.getBounds().pad(0.2));
+                    markers[phone].openPopup();
+                } else {
+                    map.setView([destLat, destLng], 16);
+                }
+            }, 300);
         }
 
         async function saveOrder() {
