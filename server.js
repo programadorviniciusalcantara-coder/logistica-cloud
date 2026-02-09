@@ -121,7 +121,7 @@ io.on("connection", (socket) => {
           onlineDrivers[idx].socketId = socket.id;
           onlineDrivers[idx].lastSeen = Date.now();
       }
-      io.to(data.store_slug).emit("refresh_admin");
+      io.to(data.store_slug || 'igo-iphones').emit("refresh_admin");
   });
 
   socket.on("driver_location", (data) => {
@@ -133,19 +133,18 @@ io.on("connection", (socket) => {
       } else {
           onlineDrivers.push({ socketId: socket.id, lastSeen: Date.now(), ...data });
       }
-      io.to(data.store_slug).emit("update_map", data);
+      io.to(data.store_slug || 'igo-iphones').emit("update_map", data);
   });
 
-  socket.on("disconnect", () => {
-      // PERSISTÊNCIA: Não removemos o motoboy no disconnect
-      // Ele só sai da lista se ficar 10 min sem sinal GPS
+  // SISTEMA DE CHAT UNIFICADO
+  socket.on("send_chat_message", (data) => {
+      io.to(data.store_slug || 'igo-iphones').emit("new_chat_message", data);
   });
 });
 
-// Limpeza de motoboys realmente inativos (10 min)
 setInterval(() => {
     const timeout = Date.now() - (10 * 60 * 1000);
     onlineDrivers = onlineDrivers.filter(d => d.lastSeen > timeout);
 }, 60000);
 
-server.listen(process.env.PORT || 3000, () => console.log("iGO Server V3.3"));
+server.listen(process.env.PORT || 3000, () => console.log("Servidor Rodando V3.4"));
