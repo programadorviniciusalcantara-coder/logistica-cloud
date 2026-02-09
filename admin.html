@@ -7,62 +7,34 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-        
         :root { --primary: #FF4500; --bg: #F3F4F6; --sidebar-bg: #050505; --success: #10B981; --danger: #EF4444; }
-        
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); display: flex; height: 100vh; overflow: hidden; color: #1F2937; }
-
         .sidebar { width: 260px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 20px rgba(0,0,0,0.1); }
         .logo-box { padding: 40px 20px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #222; margin-bottom: 20px; }
-        
         #logo-container { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; background: transparent; border-radius: 20px; padding: 10px; border: 1px solid #333; }
         canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
-
         .nav-item { padding: 16px 30px; cursor: pointer; display: flex; align-items: center; color: #9CA3AF; transition: 0.3s; font-weight: 600; font-size: 14px; margin-bottom: 5px; }
         .nav-item i { margin-right: 15px; width: 20px; text-align: center; font-size: 16px; }
         .nav-item:hover, .nav-item.active { background: #1F1F1F; color: var(--primary); border-right: 4px solid var(--primary); }
-
         .main { flex: 1; padding: 40px; overflow-y: auto; display: none; height: 100vh; box-sizing: border-box; }
         .main.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
         .cards-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-bottom: 40px; }
         .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #E5E7EB; display: flex; flex-direction: column; justify-content: space-between; }
-        .card h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #6B7280; margin: 0 0 10px 0; font-weight: 700; }
         .card .value { font-size: 32px; font-weight: 800; color: #111; }
-        .card-icon { align-self: flex-end; font-size: 24px; opacity: 0.2; }
-
-        h2 { font-size: 24px; font-weight: 800; color: #111; margin-top: 0; margin-bottom: 30px; letter-spacing: -0.5px; }
-        
-        #map, #map-cadastro { width: 100%; height: 500px !important; min-height: 500px !important; border-radius: 20px; border: 4px solid white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); background: #e5e5e5; display: block; position: relative; z-index: 1; }
-        
-        .order-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 6px solid var(--primary); transition: 0.2s; }
-        .order-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-        
-        .form-layout { display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px; }
+        h2 { font-size: 24px; font-weight: 800; color: #111; margin-bottom: 30px; }
+        #map, #map-cadastro { width: 100%; height: 500px; border-radius: 20px; border: 4px solid white; background: #e5e5e5; }
+        .order-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; border-left: 6px solid var(--primary); }
         .input-group { margin-bottom: 20px; }
-        .input-group label { display: block; font-size: 11px; font-weight: 700; margin-bottom: 8px; color: #4B5563; text-transform: uppercase; letter-spacing: 0.5px; }
-        .input-group input { width: 100%; padding: 15px; border: 1px solid #E5E7EB; border-radius: 12px; box-sizing: border-box; font-size: 15px; transition: 0.2s; background: #F9FAFB; }
-        .input-group input:focus { border-color: var(--primary); background: white; outline: none; box-shadow: 0 0 0 3px rgba(255, 69, 0, 0.1); }
-        
-        .btn-save { width: 100%; background: #111; color: white; padding: 18px; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.2s; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-        .btn-save:hover { background: var(--primary); transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255, 69, 0, 0.2); }
-        
-        .btn-dispatch { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; transition: 0.2s; }
-        .btn-dispatch:hover { background: #e03e00; }
-
-        select { padding: 12px; border-radius: 8px; border: 1px solid #E5E7EB; flex: 1; font-weight: 600; background: #F9FAFB; color: #374151; cursor: pointer; }
-
+        .input-group label { display: block; font-size: 11px; font-weight: 700; margin-bottom: 8px; color: #4B5563; text-transform: uppercase; }
+        .input-group input { width: 100%; padding: 15px; border: 1px solid #E5E7EB; border-radius: 12px; box-sizing: border-box; background: #F9FAFB; }
+        .btn-save { width: 100%; background: #111; color: white; padding: 18px; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; }
+        .btn-dispatch { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+        select { padding: 12px; border-radius: 8px; border: 1px solid #E5E7EB; background: #F9FAFB; }
         table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
-        th { text-align: left; padding: 15px; color: #9CA3AF; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
-        td { background: white; padding: 20px; font-size: 14px; font-weight: 600; color: #374151; }
-        tr td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
-        tr td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
-        
-        /* STATUS INDICATOR */
+        td { background: white; padding: 20px; font-size: 14px; font-weight: 600; }
         #sys-status { position: fixed; top: 20px; right: 20px; background: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 9999; }
         .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
-        .dot.online { background: var(--success); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
+        .dot.online { background: var(--success); }
         .dot.offline { background: var(--danger); }
     </style>
 </head>
@@ -84,32 +56,14 @@
     <div id="dashboard" class="main active">
         <h2>Visão Geral</h2>
         <div class="cards-container">
-            <div class="card" style="border-left:5px solid var(--success)">
-                <h3>Faturamento do Dia</h3><div class="value" id="dash-money">R$ 0,00</div><i class="fas fa-dollar-sign card-icon" style="color:var(--success)"></i>
-            </div>
-            <div class="card" style="border-left:5px solid var(--primary)">
-                <h3>Pedidos Pendentes</h3><div class="value" id="dash-pending">0</div><i class="fas fa-clock card-icon" style="color:var(--primary)"></i>
-            </div>
-            <div class="card" style="border-left:5px solid #111">
-                <h3>Motoboys Online</h3><div class="value" id="dash-drivers">0</div><i class="fas fa-motorcycle card-icon" style="color:#111"></i>
-            </div>
+            <div class="card"><h3>Faturamento</h3><div class="value" id="dash-money">R$ 0,00</div></div>
+            <div class="card"><h3>Pendentes</h3><div class="value" id="dash-pending">0</div></div>
+            <div class="card"><h3>Motoboys</h3><div class="value" id="dash-drivers">0</div></div>
         </div>
         <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap: 30px;">
-            <div>
-                <h3 style="margin-bottom:20px; color:#6B7280; font-size:14px; text-transform:uppercase; font-weight:700;">Aguardando Motoboy</h3>
-                
-                <div id="pending-list" style="min-height: 200px;">
-                    <p style="color:#aaa; text-align:center; padding:20px;">Carregando pedidos...</p>
-                </div>
-                
-            </div>
-            <div class="chat-frame" style="background:white; border-radius:16px; padding:20px; box-shadow:0 4px 6px rgba(0,0,0,0.05);">
-                <h3 style="margin-top:0; color:#111;">Chat Central</h3>
-                <div id="chat-msgs" style="height:300px; overflow-y:auto; background:#F9FAFB; border-radius:12px; padding:15px; margin-bottom:15px; border:1px solid #E5E7EB;"></div>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="chat-txt" placeholder="Mensagem..." style="flex:1; padding:12px; border:1px solid #ddd; border-radius:8px;">
-                    <button onclick="sendMsg()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold;"><i class="fas fa-paper-plane"></i></button>
-                </div>
+            <div><h3>Aguardando Motoboy</h3><div id="pending-list"><p>Carregando...</p></div></div>
+            <div style="background:white; border-radius:16px; padding:20px;">
+                <h3>Chat</h3><div id="chat-msgs" style="height:250px; overflow-y:auto; background:#F9FAFB; margin-bottom:15px; padding:10px;"></div>
             </div>
         </div>
     </div>
@@ -117,34 +71,29 @@
     <div id="novo-pedido" class="main">
         <h2>Cadastrar Entrega</h2>
         <div class="form-layout">
-            <div style="background:white; padding:30px; border-radius:20px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.05);">
-                <div class="input-group"><label>Nome do Cliente</label><input type="text" id="np-name" placeholder="Ex: Maria Silva"></div>
-                <div class="input-group"><label>Valor (R$)</label><input type="text" id="np-price" oninput="maskMoney(this)" placeholder="R$ 0,00"></div>
-                <div class="input-group"><label>WhatsApp</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16" placeholder="(81) 9 0000-0000"></div>
-                
-                <div class="input-group"><label>Endereço Completo</label><input type="text" id="np-addr" onblur="buscarEndereco()" placeholder="Rua, Número, Bairro, Cidade - UF"></div>
-                
+            <div style="background:white; padding:30px; border-radius:20px;">
+                <div class="input-group"><label>Cliente</label><input type="text" id="np-name"></div>
+                <div class="input-group"><label>Valor</label><input type="text" id="np-price" oninput="maskMoney(this)"></div>
+                <div class="input-group"><label>WhatsApp</label><input type="text" id="np-phone" oninput="maskPhone(this)" maxlength="16"></div>
+                <div class="input-group"><label>Endereço</label><input type="text" id="np-addr" onblur="buscarEndereco()"></div>
                 <input type="hidden" id="np-lat" value="0"><input type="hidden" id="np-lng" value="0">
-                <button id="btn-create" class="btn-save" onclick="saveOrder()">CRIAR PEDIDO E RASTREIO</button>
+                <button id="btn-create" class="btn-save" onclick="saveOrder()">CRIAR PEDIDO</button>
             </div>
             <div id="map-cadastro"></div>
         </div>
     </div>
 
     <div id="monitoramento" class="main">
-        <h2>Monitoramento em Tempo Real</h2>
+        <h2>Rastreio em Tempo Real</h2>
         <div style="display: grid; grid-template-columns: 350px 1fr; gap: 30px;">
-            <div id="monitor-list" style="background:white; padding:20px; border-radius:20px; overflow-y:auto; height: 600px; box-shadow:0 4px 6px rgba(0,0,0,0.05);"></div>
+            <div id="monitor-list" style="height: 600px; overflow-y:auto;"></div>
             <div id="map"></div>
         </div>
     </div>
 
     <div id="historico" class="main">
-        <h2>Histórico de Entregas</h2>
-        <table>
-            <thead><tr><th>Data</th><th>Cliente</th><th>Valor</th><th>Motoboy</th><th>Ação</th></tr></thead>
-            <tbody id="history-body"></tbody>
-        </table>
+        <h2>Relatórios</h2>
+        <table><thead><tr><th>Data</th><th>Cliente</th><th>Valor</th><th>Motoboy</th><th>Ação</th></tr></thead><tbody id="history-body"></tbody></table>
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -154,8 +103,7 @@
         const STORE_SLUG = "igo-iphones";
         const socket = io(API_URL);
         let globalData = { pendingOrders: [], activeOrders: [], drivers: [], history: [] };
-        let map, mapCad, routeLayer, markers = {};
-        const osmTile = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        let map, mapCad, routeLayer;
 
         const canvas = document.getElementById('logoCanvas');
         const ctx = canvas.getContext('2d');
@@ -168,180 +116,75 @@
         };
 
         function initMaps() {
-            if (!map) { map = L.map('map', { zoomControl: false }).setView([-8.0592, -34.8996], 13); L.tileLayer(osmTile).addTo(map); routeLayer = L.layerGroup().addTo(map); }
-            if (!mapCad) { mapCad = L.map('map-cadastro', { zoomControl: false }).setView([-8.0592, -34.8996], 13); L.tileLayer(osmTile).addTo(mapCad); }
+            if (!map) { map = L.map('map', { zoomControl: false }).setView([-8.05, -34.88], 13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); routeLayer = L.layerGroup().addTo(map); }
+            if (!mapCad) { mapCad = L.map('map-cadastro', { zoomControl: false }).setView([-8.05, -34.88], 13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapCad); }
         }
 
-        window.onload = () => { 
-            initMaps(); 
-            socket.emit("join_store", STORE_SLUG); 
-            refreshData(); 
-            setInterval(refreshData, 5000); 
-        };
+        window.onload = () => { initMaps(); socket.emit("join_store", STORE_SLUG); refreshData(); setInterval(refreshData, 5000); };
         
-        function nav(id) { 
-            document.querySelectorAll('.main').forEach(d => d.classList.remove('active')); 
-            document.querySelectorAll('.nav-item').forEach(d => d.classList.remove('active')); 
-            document.getElementById(id).classList.add('active'); 
-            setTimeout(() => { if(map) map.invalidateSize(); if(mapCad) mapCad.invalidateSize(); }, 200);
-        }
+        function nav(id) { document.querySelectorAll('.main').forEach(d => d.classList.remove('active')); document.getElementById(id).classList.add('active'); setTimeout(() => { if(map) map.invalidateSize(); if(mapCad) mapCad.invalidateSize(); }, 200); }
 
         async function refreshData() {
             try {
                 const res = await fetch(`${API_URL}/api/dashboard/${STORE_SLUG}`);
-                
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error || "Erro Server 500");
-                }
-                
-                // SUCESSO DE CONEXÃO
+                if (!res.ok) throw new Error("Erro API");
                 document.getElementById('status-dot').className = "dot online";
                 document.getElementById('status-text').innerText = "Online";
-                
                 globalData = await res.json();
                 
                 document.getElementById('dash-money').innerText = globalData.history.reduce((a, b) => a + parseFloat(b.price||0), 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
                 document.getElementById('dash-pending').innerText = globalData.pendingOrders.length;
-                document.getElementById('dash-drivers').innerText = (globalData.drivers || []).length; 
+                document.getElementById('dash-drivers').innerText = globalData.drivers.length; 
 
-                const driversOptions = (globalData.drivers || []).map(d => `<option value="${d.name}|${d.phone}">${d.name} (Online)</option>`).join('');
-                
-                // --- LISTA DE PENDENTES ---
-                const pendingList = document.getElementById('pending-list');
-                if (!globalData.pendingOrders || globalData.pendingOrders.length === 0) {
-                    pendingList.innerHTML = '<p style="color:#aaa; text-align:center; padding:20px;">Nenhum pedido pendente.</p>';
-                } else {
-                    pendingList.innerHTML = globalData.pendingOrders.map(o => `
-                        <div class="order-card">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                                <span style="font-weight:800; font-size:16px;">${o.client_name}</span>
-                                <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none; cursor:pointer; font-size:14px;"><i class="fas fa-trash"></i></button>
-                            </div>
-                            <div style="color:#6B7280; font-size:13px; margin-bottom:15px;"><i class="fas fa-map-marker-alt" style="color:var(--primary)"></i> ${o.address}</div>
-                            <div style="display:flex; gap:10px;">
-                                <select id="sel-${o.id}"><option value="">Selecione o Motoboy...</option>${driversOptions}</select>
-                                <button class="btn-dispatch" onclick="despachar('${o.id}')"><i class="fas fa-paper-plane"></i></button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
+                const driversOptions = globalData.drivers.map(d => `<option value="${d.name}|${d.phone}">${d.name}</option>`).join('');
+                document.getElementById('pending-list').innerHTML = globalData.pendingOrders.map(o => `
+                    <div class="order-card">
+                        <div style="display:flex; justify-content:space-between;"><b>${o.client_name}</b> <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none;"><i class="fas fa-trash"></i></button></div>
+                        <small>${o.address}</small><br>
+                        <select id="sel-${o.id}"><option value="">Motoboy...</option>${driversOptions}</select>
+                        <button class="btn-dispatch" onclick="despachar('${o.id}')">OK</button>
+                    </div>
+                `).join('') || '<p>Nenhum pedido.</p>';
 
-                // --- MONITORAMENTO ---
                 document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
-                    <div style="padding:20px; border-bottom:1px solid #eee; background:#F9FAFB; border-radius:12px; margin-bottom:10px;">
-                        <div style="display:flex; justify-content:space-between;">
-                            <div><b>${o.client_name}</b> <span style="color:var(--success); font-weight:bold;">Em Rota</span></div>
-                            <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none; cursor:pointer; font-size:14px;"><i class="fas fa-trash"></i></button>
-                        </div>
-                        <small style="color:#6B7280;">Moto: ${o.driver_name}</small>
-                        <div style="margin:10px 0; background:#FFF4EC; color:#FF4500; font-weight:900; padding:8px; border-radius:8px; text-align:center;">CÓDIGO: ${o.delivery_code || '----'}</div>
-                        <div style="display:flex; gap:10px; margin-top:10px;">
-                            <button onclick="focarRota('${o.id}')" style="flex:1; padding:10px; border:1px solid #E5E7EB; background:white; border-radius:8px; font-weight:bold; cursor:pointer;">Mapa</button>
-                            <button onclick="enviarLink('${o.phone}', '${o.client_name}', '${o.id}')" style="flex:1; padding:10px; border:none; background:#25D366; color:white; border-radius:8px; font-weight:bold; cursor:pointer;"><i class="fab fa-whatsapp"></i> Link</button>
-                        </div>
+                    <div class="order-card" style="border-left-color:green;">
+                        <b>${o.client_name}</b> (Cód: ${o.delivery_code})<br>
+                        <small>Moto: ${o.driver_name}</small><br>
+                        <button onclick="enviarLink('${o.phone}', '${o.client_name}', '${o.id}')" style="background:#25D366; color:white; border:none; padding:5px; border-radius:5px; margin-top:5px; width:100%;">Link WhatsApp</button>
                     </div>
                 `).join('');
                 
-                document.getElementById('history-body').innerHTML = globalData.history.map(h => `<tr><td>${new Date(h.completed_at).toLocaleDateString()}</td><td>${h.client_name}</td><td>R$ ${parseFloat(h.price).toFixed(2)}</td><td>${h.driver_name}</td><td><button onclick="delHist('${h.id}')" style="color:var(--danger); background:none; border:none; cursor:pointer; font-size:16px;"><i class="fas fa-trash-alt"></i></button></td></tr>`).join('');
-
-            } catch (e) { 
-                console.error("Erro ao buscar dados:", e);
-                // FALHA DE CONEXÃO
-                document.getElementById('status-dot').className = "dot offline";
-                document.getElementById('status-text').innerText = "Erro: " + e.message;
-            }
-        }
-
-        async function cancelarPedido(id) {
-            if(!confirm("Tem certeza que deseja EXCLUIR este pedido?")) return;
-            try {
-                await fetch(`${API_URL}/delete-order/${id}`, { method: 'DELETE' });
-                refreshData();
-            } catch(e) { alert("Erro ao excluir."); }
+                document.getElementById('history-body').innerHTML = globalData.history.map(h => `<tr><td>${new Date(h.completed_at).toLocaleDateString()}</td><td>${h.client_name}</td><td>R$ ${h.price}</td><td>${h.driver_name}</td><td><button onclick="delHist('${h.id}')" style="color:red; background:none; border:none;"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+            } catch (e) { document.getElementById('status-dot').className = "dot offline"; document.getElementById('status-text').innerText = "Erro: " + e.message; }
         }
 
         async function saveOrder() {
-            const btn = document.getElementById('btn-create');
             const lat = document.getElementById('np-lat').value;
-            const lng = document.getElementById('np-lng').value;
-            
-            if(lat == 0 || lng == 0 || !lat || !lng) {
-                alert("⚠️ ATENÇÃO: Endereço não localizado!\n\nPor favor, digite o endereço completo e clique fora para buscar.");
-                return;
-            }
-
-            btn.innerText = "⏳ SALVANDO..."; btn.disabled = true;
+            if(lat == 0) return alert("Busque o endereço no mapa primeiro!");
+            const btn = document.getElementById('btn-create'); btn.disabled = true;
             try {
-                const res = await fetch(`${API_URL}/register-delivery`, { 
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify({ store_slug: STORE_SLUG, clientName: document.getElementById('np-name').value, price: parseFloat(document.getElementById('np-price').value.replace('R$','').replace('.','').replace(',','.'))||0, phone: document.getElementById('np-phone').value, address: document.getElementById('np-addr').value, lat: lat, lng: lng }) 
-                });
-
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error || "Erro desconhecido");
-                }
-
-                alert("PEDIDO CRIADO!"); 
-                document.querySelectorAll('#novo-pedido input').forEach(i => i.value = ''); 
-                document.getElementById('np-lat').value = "0"; 
-                
-                nav('dashboard'); 
-                refreshData();
-                setTimeout(refreshData, 500);
-
-            } catch (e) { 
-                alert("Erro ao salvar: " + e.message); 
-            }
-            btn.innerText = "CRIAR PEDIDO E RASTREIO"; btn.disabled = false;
+                const res = await fetch(`${API_URL}/register-delivery`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ store_slug:STORE_SLUG, clientName:document.getElementById('np-name').value, price:document.getElementById('np-price').value, phone:document.getElementById('np-phone').value, address:document.getElementById('np-addr').value, lat, lng:document.getElementById('np-lng').value }) });
+                if(!res.ok) throw new Error("Erro Banco");
+                alert("Criado!"); document.querySelectorAll('input').forEach(i => i.value=''); nav('dashboard'); refreshData();
+            } catch(e) { alert(e.message); } btn.disabled = false;
         }
 
-        async function despachar(id) {
-            const val = document.getElementById('sel-'+id).value;
-            if(!val) return alert("Selecione um motoboy!");
-            const [dName, dPhone] = val.split('|');
-            await fetch(`${API_URL}/assign-order`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ store_slug: STORE_SLUG, orderId: id, driverName: dName, driverPhone: dPhone }) });
-            refreshData();
-        }
-
-        function enviarLink(phone, name, orderId) {
-            const link = "https://jv-log.vercel.app";
-            const code = globalData.activeOrders.find(o => o.id === orderId)?.delivery_code || "????";
-            const msg = `Olá *${name}*! 👋\n\nSeu pedido iGO saiu para entrega!\n\n🔐 *CÓDIGO DE SEGURANÇA: ${code}*\n(Informe este código ao entregador)\n\n📍 *Rastreie aqui:* ${link}?id=${orderId}`;
-            window.open(`https://wa.me/55${phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        async function delHist(id) {
-            if(prompt("Senha Master:") === "Abraao2026123") { await fetch(`${API_URL}/delete-history/${id}`, {method:'DELETE'}); refreshData(); } else { alert("Senha incorreta!"); }
-        }
+        async function cancelarPedido(id) { if(confirm("Excluir?")) await fetch(`${API_URL}/delete-order/${id}`, {method:'DELETE'}); refreshData(); }
+        async function despachar(id) { const v=document.getElementById('sel-'+id).value; if(!v) return; const [n,p]=v.split('|'); await fetch(`${API_URL}/assign-order`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_slug:STORE_SLUG, orderId:id, driverName:n, driverPhone:p})}); refreshData(); }
+        function enviarLink(p, n, id) { window.open(`https://wa.me/55${p.replace(/\D/g,'')}?text=Rastreie seu pedido iGO: https://jv-log.vercel.app?id=${id}`, '_blank'); }
+        async function delHist(id) { if(prompt("Senha Master:")==="Abraao2026123") await fetch(`${API_URL}/delete-history/${id}`, {method:'DELETE'}); refreshData(); }
 
         async function buscarEndereco() {
-            const addr = document.getElementById('np-addr').value; if(addr.length<5) return;
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ', Brazil')}`);
-            const data = await res.json(); 
-            if(data.length){ 
-                document.getElementById('np-lat').value = data[0].lat; document.getElementById('np-lng').value = data[0].lon; 
-                if(window.c) mapCad.removeLayer(window.c); window.c = L.circleMarker([data[0].lat, data[0].lon], {radius:8, color:'#FF4500'}).addTo(mapCad); mapCad.setView([data[0].lat, data[0].lon], 16); 
-            } else {
-                alert("Endereço não encontrado! Tente adicionar Bairro, Cidade e Estado.");
-                document.getElementById('np-lat').value = 0;
-            }
+            const a = document.getElementById('np-addr').value; if(a.length<5) return;
+            const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a + ', Brazil')}`);
+            const d = await r.json();
+            if(d.length){ document.getElementById('np-lat').value=d[0].lat; document.getElementById('np-lng').value=d[0].lon; mapCad.setView([d[0].lat, d[0].lon], 16); L.circleMarker([d[0].lat, d[0].lon], {color:'red'}).addTo(mapCad); }
+            else alert("Não achamos o endereço. Tente Bairro e Cidade.");
         }
 
-        function maskMoney(i) { let v = i.value.replace(/\D/g, "") / 100; i.value = v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
-        function maskPhone(i) { let v = i.value.replace(/\D/g,""); if(v.length>11)v=v.substring(0,11); if(v.length>0)v="("+v; if(v.length>3)v=v.substring(0,3)+") "+v.substring(3); if(v.length>6)v=v.substring(0,6)+" "+v.substring(6); if(v.length>11)v=v.substring(0,11)+"-"+v.substring(11); i.value = v; }
-        function sendMsg() { const t = document.getElementById('chat-txt').value; if(!t.trim()) return; socket.emit('send_chat_message', { to: 'admin', text: t, from: 'Admin' }); document.getElementById('chat-txt').value = ''; }
-        socket.on('new_chat_message', (d) => { const b=document.getElementById('chat-msgs'); b.innerHTML+=`<div style="margin-bottom:10px;"><b>${d.from}:</b> ${d.text}</div>`; b.scrollTop=b.scrollHeight; });
-
-        function focarRota(id) {
-            nav('monitoramento');
-            setTimeout(() => { routeLayer.clearLayers(); const o = globalData.activeOrders.find(x => x.id === id); if(o) { L.marker([-8.0592, -34.8996]).addTo(routeLayer); L.marker([o.lat, o.lng]).addTo(routeLayer); map.setView([o.lat, o.lng], 14); map.invalidateSize(); } }, 300);
-        }
-        
+        function maskMoney(i) { i.value = i.value.replace(/\D/g,''); }
+        function maskPhone(i) { i.value = i.value.replace(/\D/g,''); }
         socket.on('refresh_admin', refreshData);
-        socket.on('update_map', (d) => { if(!markers[d.phone]) markers[d.phone] = L.marker([d.lat, d.lng]).addTo(map); else markers[d.phone].setLatLng([d.lat, d.lng]); });
     </script>
 </body>
 </html>
