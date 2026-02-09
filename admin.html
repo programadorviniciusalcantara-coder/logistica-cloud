@@ -19,19 +19,15 @@
         .main { flex: 1; padding: 40px; overflow-y: auto; display: none; height: 100vh; box-sizing: border-box; }
         .main.active { display: block; animation: fadeIn 0.3s ease; }
         .cards-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-bottom: 40px; }
-        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #E5E7EB; display: flex; flex-direction: column; justify-content: space-between; }
+        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #ddd; }
         .card .value { font-size: 32px; font-weight: 800; color: #111; }
-        h2 { font-size: 24px; font-weight: 800; color: #111; margin-bottom: 30px; }
-        #map, #map-cadastro { width: 100%; height: 500px; border-radius: 20px; border: 4px solid white; background: #e5e5e5; }
-        .order-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; border-left: 6px solid var(--primary); }
-        .input-group { margin-bottom: 20px; }
-        .input-group label { display: block; font-size: 11px; font-weight: 700; margin-bottom: 8px; color: #4B5563; text-transform: uppercase; }
-        .input-group input { width: 100%; padding: 15px; border: 1px solid #E5E7EB; border-radius: 12px; box-sizing: border-box; background: #F9FAFB; }
+        #map, #map-cadastro { width: 100%; height: 500px !important; border-radius: 20px; background: #e5e5e5; }
+        .order-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; border-left: 6px solid var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .btn-save { width: 100%; background: #111; color: white; padding: 18px; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; }
         .btn-dispatch { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
         select { padding: 12px; border-radius: 8px; border: 1px solid #E5E7EB; background: #F9FAFB; }
         table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
-        td { background: white; padding: 20px; font-size: 14px; font-weight: 600; }
+        td { background: white; padding: 20px; font-weight: 600; }
         #sys-status { position: fixed; top: 20px; right: 20px; background: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 9999; }
         .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
         .dot.online { background: var(--success); }
@@ -56,14 +52,15 @@
     <div id="dashboard" class="main active">
         <h2>Visão Geral</h2>
         <div class="cards-container">
-            <div class="card"><h3>Faturamento</h3><div class="value" id="dash-money">R$ 0,00</div></div>
-            <div class="card"><h3>Pendentes</h3><div class="value" id="dash-pending">0</div></div>
-            <div class="card"><h3>Motoboys</h3><div class="value" id="dash-drivers">0</div></div>
+            <div class="card" style="border-left-color: var(--success)"><h3>Faturamento</h3><div class="value" id="dash-money">R$ 0,00</div></div>
+            <div class="card" style="border-left-color: var(--primary)"><h3>Pendentes</h3><div class="value" id="dash-pending">0</div></div>
+            <div class="card" style="border-left-color: #111"><h3>Motoboys</h3><div class="value" id="dash-drivers">0</div></div>
         </div>
         <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap: 30px;">
-            <div><h3>Aguardando Motoboy</h3><div id="pending-list"><p>Carregando...</p></div></div>
+            <div><h3>Aguardando Motoboy</h3><div id="pending-list"></div></div>
             <div style="background:white; border-radius:16px; padding:20px;">
-                <h3>Chat</h3><div id="chat-msgs" style="height:250px; overflow-y:auto; background:#F9FAFB; margin-bottom:15px; padding:10px;"></div>
+                <h3>Chat Central</h3><div id="chat-msgs" style="height:250px; overflow-y:auto; background:#F9FAFB; padding:10px;"></div>
+                <input type="text" id="chat-txt" placeholder="Enviar mensagem..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
             </div>
         </div>
     </div>
@@ -84,9 +81,9 @@
     </div>
 
     <div id="monitoramento" class="main">
-        <h2>Rastreio em Tempo Real</h2>
+        <h2>Monitoramento em Tempo Real</h2>
         <div style="display: grid; grid-template-columns: 350px 1fr; gap: 30px;">
-            <div id="monitor-list" style="height: 600px; overflow-y:auto;"></div>
+            <div id="monitor-list" style="height: 600px; overflow-y:auto; background:white; padding:20px; border-radius:20px;"></div>
             <div id="map"></div>
         </div>
     </div>
@@ -103,7 +100,7 @@
         const STORE_SLUG = "igo-iphones";
         const socket = io(API_URL);
         let globalData = { pendingOrders: [], activeOrders: [], drivers: [], history: [] };
-        let map, mapCad, routeLayer;
+        let map, mapCad, routeLayer, markers = {};
 
         const canvas = document.getElementById('logoCanvas');
         const ctx = canvas.getContext('2d');
@@ -116,12 +113,11 @@
         };
 
         function initMaps() {
-            if (!map) { map = L.map('map', { zoomControl: false }).setView([-8.05, -34.88], 13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); routeLayer = L.layerGroup().addTo(map); }
-            if (!mapCad) { mapCad = L.map('map-cadastro', { zoomControl: false }).setView([-8.05, -34.88], 13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapCad); }
+            if (!map) { map = L.map('map', { zoomControl: false }).setView([-8.0592, -34.8996], 13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); routeLayer = L.layerGroup().addTo(map); }
+            if (!mapCad) { mapCad = L.map('map-cadastro', { zoomControl: false }).setView([-8.0592, -34.8996], 13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapCad); }
         }
 
         window.onload = () => { initMaps(); socket.emit("join_store", STORE_SLUG); refreshData(); setInterval(refreshData, 5000); };
-        
         function nav(id) { document.querySelectorAll('.main').forEach(d => d.classList.remove('active')); document.getElementById(id).classList.add('active'); setTimeout(() => { if(map) map.invalidateSize(); if(mapCad) mapCad.invalidateSize(); }, 200); }
 
         async function refreshData() {
@@ -137,54 +133,54 @@
                 document.getElementById('dash-drivers').innerText = globalData.drivers.length; 
 
                 const driversOptions = globalData.drivers.map(d => `<option value="${d.name}|${d.phone}">${d.name}</option>`).join('');
+                
                 document.getElementById('pending-list').innerHTML = globalData.pendingOrders.map(o => `
                     <div class="order-card">
-                        <div style="display:flex; justify-content:space-between;"><b>${o.client_name}</b> <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none;"><i class="fas fa-trash"></i></button></div>
-                        <small>${o.address}</small><br>
-                        <select id="sel-${o.id}"><option value="">Motoboy...</option>${driversOptions}</select>
+                        <div style="display:flex; justify-content:space-between;"><b>${o.client_name}</b> <button onclick="cancelarPedido('${o.id}')" style="color:red; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button></div>
+                        <small>${o.address}</small><br><br>
+                        <select id="sel-${o.id}"><option value="">Selecione Motoboy...</option>${driversOptions}</select>
                         <button class="btn-dispatch" onclick="despachar('${o.id}')">OK</button>
                     </div>
-                `).join('') || '<p>Nenhum pedido.</p>';
+                `).join('') || '<p>Nenhum pedido pendente.</p>';
 
                 document.getElementById('monitor-list').innerHTML = globalData.activeOrders.map(o => `
-                    <div class="order-card" style="border-left-color:green;">
-                        <b>${o.client_name}</b> (Cód: ${o.delivery_code})<br>
+                    <div class="order-card" style="border-left-color: #10B981;">
+                        <div style="display:flex; justify-content:space-between;"><b>${o.client_name}</b> <button onclick="cancelarPedido('${o.id}')" style="color:red; border:none; background:none; cursor:pointer;"><i class="fas fa-trash"></i></button></div>
                         <small>Moto: ${o.driver_name}</small><br>
-                        <button onclick="enviarLink('${o.phone}', '${o.client_name}', '${o.id}')" style="background:#25D366; color:white; border:none; padding:5px; border-radius:5px; margin-top:5px; width:100%;">Link WhatsApp</button>
+                        <div style="margin:10px 0; background:#FFF4EC; color:#FF4500; font-weight:900; padding:8px; border-radius:8px; text-align:center;">CÓDIGO: ${o.delivery_code}</div>
+                        <button onclick="enviarLink('${o.phone}', '${o.client_name}', '${o.id}')" style="width:100%; padding:10px; background:#25D366; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">WhatsApp Link</button>
                     </div>
                 `).join('');
                 
-                document.getElementById('history-body').innerHTML = globalData.history.map(h => `<tr><td>${new Date(h.completed_at).toLocaleDateString()}</td><td>${h.client_name}</td><td>R$ ${h.price}</td><td>${h.driver_name}</td><td><button onclick="delHist('${h.id}')" style="color:red; background:none; border:none;"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+                document.getElementById('history-body').innerHTML = globalData.history.map(h => `<tr><td>${new Date(h.completed_at).toLocaleDateString()}</td><td>${h.client_name}</td><td>R$ ${h.price}</td><td>${h.driver_name}</td><td><button onclick="delHist('${h.id}')" style="color:red; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button></td></tr>`).join('');
             } catch (e) { document.getElementById('status-dot').className = "dot offline"; document.getElementById('status-text').innerText = "Erro: " + e.message; }
         }
 
         async function saveOrder() {
             const lat = document.getElementById('np-lat').value;
             if(lat == 0) return alert("Busque o endereço no mapa primeiro!");
-            const btn = document.getElementById('btn-create'); btn.disabled = true;
             try {
-                const res = await fetch(`${API_URL}/register-delivery`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ store_slug:STORE_SLUG, clientName:document.getElementById('np-name').value, price:document.getElementById('np-price').value, phone:document.getElementById('np-phone').value, address:document.getElementById('np-addr').value, lat, lng:document.getElementById('np-lng').value }) });
+                const res = await fetch(`${API_URL}/register-delivery`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ store_slug:STORE_SLUG, clientName:document.getElementById('np-name').value, price:document.getElementById('np-price').value.replace('R$','').trim(), phone:document.getElementById('np-phone').value, address:document.getElementById('np-addr').value, lat, lng:document.getElementById('np-lng').value }) });
                 if(!res.ok) throw new Error("Erro Banco");
-                alert("Criado!"); document.querySelectorAll('input').forEach(i => i.value=''); nav('dashboard'); refreshData();
-            } catch(e) { alert(e.message); } btn.disabled = false;
+                alert("Pedido Criado!"); nav('dashboard'); refreshData();
+            } catch(e) { alert("Erro ao salvar."); }
         }
 
-        async function cancelarPedido(id) { if(confirm("Excluir?")) await fetch(`${API_URL}/delete-order/${id}`, {method:'DELETE'}); refreshData(); }
-        async function despachar(id) { const v=document.getElementById('sel-'+id).value; if(!v) return; const [n,p]=v.split('|'); await fetch(`${API_URL}/assign-order`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_slug:STORE_SLUG, orderId:id, driverName:n, driverPhone:p})}); refreshData(); }
+        async function cancelarPedido(id) { if(confirm("Deseja apagar este pedido?")) await fetch(`${API_URL}/delete-order/${id}`, {method:'DELETE'}); refreshData(); }
+        async function despachar(id) { const v=document.getElementById('sel-'+id).value; if(!v) return alert("Selecione um motoboy!"); const [n,p]=v.split('|'); await fetch(`${API_URL}/assign-order`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_slug:STORE_SLUG, orderId:id, driverName:n, driverPhone:p})}); refreshData(); }
         function enviarLink(p, n, id) { window.open(`https://wa.me/55${p.replace(/\D/g,'')}?text=Rastreie seu pedido iGO: https://jv-log.vercel.app?id=${id}`, '_blank'); }
-        async function delHist(id) { if(prompt("Senha Master:")==="Abraao2026123") await fetch(`${API_URL}/delete-history/${id}`, {method:'DELETE'}); refreshData(); }
+        async function delHist(id) { if(prompt("Senha Master:")==="abraao123@") await fetch(`${API_URL}/delete-history/${id}`, {method:'DELETE'}); refreshData(); }
 
         async function buscarEndereco() {
             const a = document.getElementById('np-addr').value; if(a.length<5) return;
             const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a + ', Brazil')}`);
             const d = await r.json();
             if(d.length){ document.getElementById('np-lat').value=d[0].lat; document.getElementById('np-lng').value=d[0].lon; mapCad.setView([d[0].lat, d[0].lon], 16); L.circleMarker([d[0].lat, d[0].lon], {color:'red'}).addTo(mapCad); }
-            else alert("Não achamos o endereço. Tente Bairro e Cidade.");
         }
-
-        function maskMoney(i) { i.value = i.value.replace(/\D/g,''); }
+        function maskMoney(i) { let v = i.value.replace(/\D/g, "") / 100; i.value = v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
         function maskPhone(i) { i.value = i.value.replace(/\D/g,''); }
         socket.on('refresh_admin', refreshData);
+        socket.on('update_map', d => { if(!markers[d.phone]) markers[d.phone] = L.marker([d.lat, d.lng]).addTo(map); else markers[d.phone].setLatLng([d.lat, d.lng]); });
     </script>
 </body>
 </html>
